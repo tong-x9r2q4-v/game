@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <!-- ↓ 更新されたか確認しやすいようにタイトルを変更しています ↓ -->
-  <title>3D TPS ウォーターバトル【v2】</title>
+  <title>3D TPS ウォーターーバトル【v2】</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -99,7 +99,7 @@
       peer.on('open', () => { 
         document.getElementById('room-id-display').innerText = `ルーム: ${code}`;
         document.getElementById('room-id-display').classList.remove('hidden');
-        updateStatus("相手の参加を待っています...");
+        updateStatus("相手の参加を待っています...しばらくお待ちください");
       });
       peer.on('connection', (c) => { conn = c; setupCommunication(); });
     }
@@ -108,7 +108,7 @@
       const code = document.getElementById('join-room-id').value;
       if (!code) return;
       peer = new Peer();
-      updateStatus("接続中...");
+      updateStatus("接続中です...");
       peer.on('open', () => { conn = peer.connect('water-battle-' + code); setupCommunication(); });
     }
 
