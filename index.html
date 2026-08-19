@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>P2P リアルタイム エアホッケー</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col items-center justify-center p-4 touch-none select-none">
+
+  <!-- 1. ロビー画面（接続設定） -->
+  <div id="lobby-view" class="w-full max-w-sm bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl space-y-6 text-center">
+    <div>
+      <div class="text-4xl mb-2">🏒</div>
+      <h1 class="text-xl font-bold text-slate-100">P2P Air Hockey</h1>
+      <p class="text-xs text-slate-400 mt-1">PeerJSを使用したリアルタイム対戦</p>
+    </div>
+
+    <!-- ホスト用（部屋を作る） -->
+    <div class="p-4 bg-slate-700/50 rounded-2xl border border-slate-600 space-y-3">
+      <h2 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">部屋を作る（Host）</h2>
+      <button onclick="createRoom()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-xl text-sm transition">
+        ルームIDを発行する
+      </button>
+      <div id="room-id-display" class="hidden p-2 bg-slate-900 rounded-lg text-xs font-mono text-emerald-400 border border-emerald-500/30 break-all select-all">
+        <!-- ルームIDが表示される -->
+      </div>
+    </div>
+
+    <div class="text-xs text-slate-500 font-bold">OR</div>
+
+    <!-- ゲスト用（部屋に入る） -->
+    <div class="p-4 bg-slate-700/50 rounded-2xl border border-slate-600 space-y-3">
+      <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wider">部屋に入る（Guest）</h2>
+      <input type="text" id="join-room-id" placeholder="相手のルームIDを入力" 
+        class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-xs text-center font-mono text-white focus:outline-none focus:border-amber-400">
+      <button onclick="joinRoom()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 font-bold rounded-xl text-sm transition">
+        対戦に参加する
+      </button>
+    </div>
+
+    <p id="status-text" class="text-xs text-slate-400">接続待機中...</p>
+  </div>
+
+  <!-- 2. ゲーム画面 -->
+  <div id="game-view" class="hidden flex-col items-center space-y-3">
+    <!-- スコアボード -->
+    <div class="flex items-center justify-between w-[320px] px-4 py-2 bg-slate-800 rounded-2xl border border-slate-700">
+      <div class="text-left">
+        <div class="text-[10px] text-indigo-400 font-bold uppercase">YOU</div>
+        <div id="score-you" class="text-2xl font-extrabold">0</div>
+      </div>
+      <div class="text-xs font-bold text-slate-500">VS</div>
+      <div class="text-right">
+        <div class="text-[10px] text-rose-400 font-bold uppercase">ENEMY</div>
+        <div id="score-enemy" class="text-2xl font-extrabold">0</div>
+      </div>
+    </div>
+
+    <!-- ゲームキャンバス -->
+    <canvas id="gameCanvas" width="320" height="480" class="bg-slate-950 rounded-2xl border-2 border-slate-700 shadow-2xl cursor-none"></canvas>
+  </div>
+
+  <script>
+    let peer = null;
+    let conn = null;
+    let isHost = false;
+
+    // ゲーム用変数（幅320, 高さ480固定）
+    const CANVAS_WIDTH = 320;
+    const CANVAS_HEIGHT = 480;
+    const PADDLE_RADIUS = 24;
+    const PUCK_RADIUS = 12;
+    const GOAL_WIDTH = 120;
+
+    let canvas, ctx;
+    let myScore = 0, enemyScore = 0;
+
+    // プレイヤーの位置
+    let myX = CANVAS_WIDTH / 2;
+    let myY = CANVAS_HEIGHT - 60; // 自分は常に画面下側を操作
+    let enemyX = CANVAS_WIDTH / 2;
+    let enemyY = 60;              // 相手は画面上側（同期時に座標反転）
+
+    // パック（ホストが物理演算を担当）
+    let puck = {
+      x: CANVAS_WIDTH / 2,
+      y: CANVAS_HEIGHT / 2,
+      vx: 0,
+      vy: 0
+    };
+
+    // --- 1. P2P接続のセットアップ ---
+    function createRoom() {
+      peer = new Peer();
+      document.getElementById('status-text').innerText = "PeerID発行中...";
+
+      peer.on('open', (id) => {
+        isHost = true;
+        document.getElementById('room-id-display').innerText = id;
+        document.getElementById('room-id-display').classList.remove('hidden');
+        document.getElementById('status-text').innerText = "相手の接続を待っています...";
+      });
+
+      peer.on('connection', (connection) => {
+        conn = connection;
+        setupCommunication();
+      });
+    }
+
+    function joinRoom() {
+      const targetId = document.getElementById('join-room-id').value.trim();
+      if (!targetId) {
+        alert("ルームIDを入力してください");
+        return;
+      }
+
+      peer = new Peer();
+      document.getElementById('status-text').innerText = "接続中...";
+
+      peer.on('open', () => {
+        isHost = false;
+        conn = peer.connect(targetId);
+        setupCommunication();
+      });
+    }
+
+    function setupCommunication() {
+      conn.on('open', () => {
+        // ロビーを閉じてゲーム開始
+        document.getElementById('lobby-view').classList.add('hidden');
+        document.getElementById('game-view').classList.remove('hidden');
+        initGame();
+      });
+
+      conn.on('data', (data) => {
+        if (data.type === 'pos') {
+          // 相手の位置を受信（相手目線の下側座標 → 自分目線の上側座標へ反転）
+          enemyX = CANVAS_WIDTH - data.x;
+          enemyY = CANVAS_HEIGHT - data.y;
+        } else if (data.type === 'gameState') {
+          // ゲスト側はホストからパックとスコアの同期情報を受け取る（座標反転）
+          puck.x = CANVAS_WIDTH - data.puck.x;
+          puck.y = CANVAS_HEIGHT - data.puck.y;
+          myScore = data.scoreHost;   // 相手側の得点が自分側の得点
+          enemyScore = data.scoreGuest;
+          updateScoreDisplay();
+        }
+      });
+    }
+
+    // --- 2. ゲームメイン処理 ---
+    function initGame() {
+      canvas = document.getElementById('gameCanvas');
+      ctx = canvas.getContext('2d');
+
+      // 操作イベント（マウス・タッチ）
+      const handleMove = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        let x = clientX - rect.left;
+        let y = clientY - rect.top;
+
+        // パドルの動ける範囲を自分のコート（下半分）に制限
+        myX = Math.max(PADDLE_RADIUS, Math.min(CANVAS_WIDTH - PADDLE_RADIUS, x));
+        myY = Math.max(CANVAS_HEIGHT / 2 + PADDLE_RADIUS, Math.min(CANVAS_HEIGHT - PADDLE_RADIUS, y));
+
+        // 自分の位置を相手に送信
+        if (conn && conn.open) {
+          conn.send({ type: 'pos', x: myX, y: myY });
+        }
+      };
+
+      canvas.addEventListener('mousemove', handleMove);
+      canvas.addEventListener('touchmove', handleMove);
+
+      if (isHost) resetPuck();
+
+      // メインゲームループ開始
+      requestAnimationFrame(gameLoop);
+    }
+
+    function resetPuck() {
+      puck.x = CANVAS_WIDTH / 2;
+      puck.y = CANVAS_HEIGHT / 2;
+      puck.vx = (Math.random() - 0.5) * 4;
+      puck.vy = isHost ? 3 : -3;
+    }
+
+    function gameLoop() {
+      if (isHost) {
+        updatePhysics();
+        // ホストがゲーム全状態を同期送信
+        if (conn && conn.open) {
+          conn.send({
+            type: 'gameState',
+            puck: { x: puck.x, y: puck.y },
+            scoreHost: enemyScore, // ホスト目線でのGuest得点
+            scoreGuest: myScore   // ホスト目線でのHost得点
+          });
+        }
+      }
+
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // --- 3. 物理演算（ホストのみ実行） ---
+    function updatePhysics() {
+      puck.x += puck.vx;
+      puck.y += puck.vy;
+
+      // 摩擦減速
+      puck.vx *= 0.99;
+      puck.vy *= 0.99;
+
+      // 壁反射（左右）
+      if (puck.x - PUCK_RADIUS < 0 || puck.x + PUCK_RADIUS > CANVAS_WIDTH) {
+        puck.vx *= -1;
+        puck.x = puck.x - PUCK_RADIUS < 0 ? PUCK_RADIUS : CANVAS_WIDTH - PUCK_RADIUS;
+      }
+
+      // 壁反射＆ゴール判定（上下）
+      const goalLeft = (CANVAS_WIDTH - GOAL_WIDTH) / 2;
+      const goalRight = (CANVAS_WIDTH + GOAL_WIDTH) / 2;
+
+      // 上壁（相手ゴール）
+      if (puck.y - PUCK_RADIUS < 0) {
+        if (puck.x > goalLeft && puck.x < goalRight) {
+          myScore++; // 自分（Host）のゴール！
+          updateScoreDisplay();
+          resetPuck();
+          return;
+        } else {
+          puck.vy *= -1;
+          puck.y = PUCK_RADIUS;
+        }
+      }
+
+      // 下壁（自分ゴール）
+      if (puck.y + PUCK_RADIUS > CANVAS_HEIGHT) {
+        if (puck.x > goalLeft && puck.x < goalRight) {
+          enemyScore++; // 相手（Guest）のゴール！
+          updateScoreDisplay();
+          resetPuck();
+          return;
+        } else {
+          puck.vy *= -1;
+          puck.y = CANVAS_HEIGHT - PUCK_RADIUS;
+        }
+      }
+
+      // パドル当たり判定（自分）
+      checkPaddleCollision(myX, myY);
+      // パドル当たり判定（相手）
+      checkPaddleCollision(enemyX, enemyY);
+    }
+
+    function checkPaddleCollision(px, py) {
+      const dx = puck.x - px;
+      const dy = puck.y - py;
+      const dist = Math.hypot(dx, dy);
+      const minDist = PADDLE_RADIUS + PUCK_RADIUS;
+
+      if (dist < minDist) {
+        const angle = Math.atan2(dy, dx);
+        const speed = Math.max(5, Math.hypot(puck.vx, puck.vy) + 1);
+        
+        puck.vx = Math.cos(angle) * speed;
+        puck.vy = Math.sin(angle) * speed;
+
+        // 埋まり防止
+        puck.x = px + Math.cos(angle) * minDist;
+        puck.y = py + Math.sin(angle) * minDist;
+      }
+    }
+
+    function updateScoreDisplay() {
+      document.getElementById('score-you').innerText = myScore;
+      document.getElementById('score-enemy').innerText = enemyScore;
+    }
+
+    // --- 4. 描画処理 ---
+    function draw() {
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      // コート中央線
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, CANVAS_HEIGHT / 2);
+      ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT / 2);
+      ctx.stroke();
+
+      // ゴールライン描画
+      const goalLeft = (CANVAS_WIDTH - GOAL_WIDTH) / 2;
+      ctx.fillStyle = '#f43f5e'; // 敵ゴール（赤）
+      ctx.fillRect(goalLeft, 0, GOAL_WIDTH, 4);
+      ctx.fillStyle = '#6366f1'; // 自分ゴール（青）
+      ctx.fillRect(goalLeft, CANVAS_HEIGHT - 4, GOAL_WIDTH, 4);
+
+      // パック（球）
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(puck.x, puck.y, PUCK_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 相手パドル（上）
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath();
+      ctx.arc(enemyX, enemyY, PADDLE_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 自分パドル（下）
+      ctx.fillStyle = '#6366f1';
+      ctx.beginPath();
+      ctx.arc(myX, myY, PADDLE_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  </script>
+</body>
+</html>
