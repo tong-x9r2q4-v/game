@@ -132,7 +132,7 @@
           </div>
           <div class="text-xs font-bold text-amber-400">📺 臨時ニュース速報</div>
           <div class="text-2xl animate-pulse">📺💥☄️</div>
-          <p class="text-[11px] font-bold text-slate-200">「未確認の巨大隕石群が落札中！間もなく衝撃波が到達します！」</p>
+          <p class="text-[11px] font-bold text-slate-200">「未確認の巨大隕石群が落下中！間もなく衝撃波が到達します！」</p>
           <div id="tv-timer" class="text-2xl font-black text-red-500 font-mono">5</div>
         </div>
       </div>
@@ -359,7 +359,7 @@
       return group;
     }
 
-    // ゆるいモールス信号検知
+    // モールス信号検知
     function setupShootDetector() {
       const btn = document.getElementById('shoot-btn');
 
@@ -418,9 +418,8 @@
       flashOverlay.classList.add('secret-flash');
     }
 
-    // --- 隠しシーケンス展開 ---
+    // --- 隠しシーケンス展開（発動者側） ---
     function startSecretSequence() {
-      // 5体に増殖
       for (let i = 0; i < 5; i++) {
         const clone = createStickman(0x38bdf8);
         const offsetX = (i - 2) * 2.5;
@@ -429,13 +428,11 @@
         clones.push(clone);
       }
 
-      // 10秒後：画面切り替え（警報 & 隕石スタート）
       setTimeout(() => {
         document.getElementById('warning-banner').classList.remove('hidden');
         spawnMeteors();
       }, 10000);
 
-      // 10秒後+少ししてからTV放映（5秒カウントダウン）
       setTimeout(() => {
         const tv = document.getElementById('tv-overlay');
         tv.classList.remove('hidden');
@@ -447,8 +444,7 @@
           if (tvCount >= 0) tvTimerElem.innerText = tvCount;
           if (tvCount <= 0) {
             clearInterval(interval);
-            // 爆発演出へ
-            triggerBigExplosion();
+            triggerBigExplosion(true); // 自分＝WIN
           }
         }, 1000);
       }, 12000);
@@ -480,19 +476,10 @@
           if (tvCount >= 0) tvTimerElem.innerText = tvCount;
           if (tvCount <= 0) {
             clearInterval(interval);
-            triggerBigExplosionForEnemy();
+            triggerBigExplosion(false); // 相手発動＝LOSE
           }
         }, 1000);
       }, 12000);
-    }
-
-    function triggerBigExplosionForEnemy() {
-      const nuke = document.getElementById('nuke-overlay');
-      nuke.classList.add('nuke-flash');
-
-      setTimeout(() => {
-        endGame(false);
-      }, 700);
     }
 
     function spawnMeteors() {
@@ -510,12 +497,19 @@
       }
     }
 
-    function triggerBigExplosion() {
+    function triggerBigExplosion(isWin) {
       const nuke = document.getElementById('nuke-overlay');
       nuke.classList.add('nuke-flash');
 
       setTimeout(() => {
-        endGame(true);
+        if (isWin) {
+          enemyHp = 0;
+          document.getElementById('hp-enemy').style.width = '0%';
+        } else {
+          myHp = 0;
+          document.getElementById('hp-you').style.width = '0%';
+        }
+        endGame(isWin);
       }, 700);
     }
 
@@ -530,10 +524,8 @@
       const vx = -Math.sin(myPos.angle) * speed;
       const vz = -Math.cos(myPos.angle) * speed;
 
-      // 通常弾発射
       spawnWaterBullet(myPos.x, myPos.z, vx, vz, true);
 
-      // 分身からも一斉斉射
       if (secretModeActive) {
         clones.forEach(clone => {
           spawnWaterBullet(clone.position.x, clone.position.z, vx, vz, true);
@@ -684,7 +676,6 @@
         updateWaterBullets();
         updateMeteors();
 
-        // 隠しモード中は連射・HP減少ゼロ
         if (secretModeActive) {
           myHp = 100;
           document.getElementById('hp-you').style.width = '100%';
@@ -824,11 +815,11 @@
 
       overlay.classList.remove('hidden');
       if (isWin) {
-        text.innerText = secretModeActive ? "WORLD DESTROYED ☄️ (WIN)" : "YOU WIN! 💦";
-        text.className = "text-2xl font-extrabold text-cyan-400 tracking-wider";
+        text.innerText = "YOU WIN! ☄️";
+        text.className = "text-3xl font-extrabold text-cyan-400 tracking-wider";
       } else {
         text.innerText = "びしょ濡れ... LOSE ☔";
-        text.className = "text-2xl font-extrabold text-rose-400 tracking-wider";
+        text.className = "text-3xl font-extrabold text-rose-400 tracking-wider";
       }
     }
 
