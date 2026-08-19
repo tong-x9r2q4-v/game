@@ -1,43 +1,44 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta name="robots" content="noindex, nofollow">
   <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>P2P リアルタイム エアホッケー</title>
+  <title>P2P リアルタイム タンクバトル</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body { touch-action: manipulation; }
+  </style>
 </head>
-<body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col items-center justify-center p-4 touch-none select-none">
+<body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col items-center justify-center p-2 select-none">
 
-  <!-- 1. ロビー画面（接続設定） -->
+  <!-- 1. ロビー画面 -->
   <div id="lobby-view" class="w-full max-w-sm bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl space-y-6 text-center">
     <div>
-      <div class="text-4xl mb-2">🏒</div>
-      <h1 class="text-xl font-bold text-slate-100">P2P Air Hockey</h1>
-      <p class="text-xs text-slate-400 mt-1">PeerJSを使用したリアルタイム対戦</p>
+      <div class="text-4xl mb-2">💣</div>
+      <h1 class="text-xl font-bold text-slate-100">P2P Tank Battle</h1>
+      <p class="text-xs text-slate-400 mt-1">1ファイルで動くリアルタイム対戦シューティング</p>
     </div>
 
-    <!-- ホスト用（部屋を作る） -->
+    <!-- ホスト -->
     <div class="p-4 bg-slate-700/50 rounded-2xl border border-slate-600 space-y-3">
       <h2 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">部屋を作る（Host）</h2>
       <button onclick="createRoom()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-xl text-sm transition">
-        ルームIDを発行する
+        ルームIDを発行
       </button>
-      <div id="room-id-display" class="hidden p-2 bg-slate-900 rounded-lg text-xs font-mono text-emerald-400 border border-emerald-500/30 break-all select-all">
-        <!-- ルームIDが表示される -->
-      </div>
+      <div id="room-id-display" class="hidden p-2 bg-slate-900 rounded-lg text-xs font-mono text-emerald-400 border border-emerald-500/30 break-all select-all"></div>
     </div>
 
     <div class="text-xs text-slate-500 font-bold">OR</div>
 
-    <!-- ゲスト用（部屋に入る） -->
+    <!-- ゲスト -->
     <div class="p-4 bg-slate-700/50 rounded-2xl border border-slate-600 space-y-3">
       <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wider">部屋に入る（Guest）</h2>
       <input type="text" id="join-room-id" placeholder="相手のルームIDを入力" 
         class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-xs text-center font-mono text-white focus:outline-none focus:border-amber-400">
       <button onclick="joinRoom()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 font-bold rounded-xl text-sm transition">
-        対戦に参加する
+        対戦に参加
       </button>
     </div>
 
@@ -45,281 +46,290 @@
   </div>
 
   <!-- 2. ゲーム画面 -->
-  <div id="game-view" class="hidden flex-col items-center space-y-3">
-    <!-- スコアボード -->
+  <div id="game-view" class="hidden flex-col items-center space-y-2">
+    <!-- HPバー -->
     <div class="flex items-center justify-between w-[320px] px-4 py-2 bg-slate-800 rounded-2xl border border-slate-700">
-      <div class="text-left">
-        <div class="text-[10px] text-indigo-400 font-bold uppercase">YOU</div>
-        <div id="score-you" class="text-2xl font-extrabold">0</div>
+      <div class="text-left w-28">
+        <div class="text-[10px] text-indigo-400 font-bold">YOU (HP)</div>
+        <div class="w-full bg-slate-700 h-3 rounded-full overflow-hidden mt-1">
+          <div id="hp-you" class="bg-indigo-500 h-full w-full transition-all"></div>
+        </div>
       </div>
       <div class="text-xs font-bold text-slate-500">VS</div>
-      <div class="text-right">
-        <div class="text-[10px] text-rose-400 font-bold uppercase">ENEMY</div>
-        <div id="score-enemy" class="text-2xl font-extrabold">0</div>
+      <div class="text-right w-28">
+        <div class="text-[10px] text-rose-400 font-bold">ENEMY (HP)</div>
+        <div class="w-full bg-slate-700 h-3 rounded-full overflow-hidden mt-1">
+          <div id="hp-enemy" class="bg-rose-500 h-full w-full transition-all"></div>
+        </div>
       </div>
     </div>
 
     <!-- ゲームキャンバス -->
-    <canvas id="gameCanvas" width="320" height="480" class="bg-slate-950 rounded-2xl border-2 border-slate-700 shadow-2xl cursor-none"></canvas>
+    <canvas id="gameCanvas" width="320" height="320" class="bg-slate-950 rounded-2xl border-2 border-slate-700 shadow-2xl"></canvas>
+
+    <!-- モバイル用コントローラー -->
+    <div class="w-[320px] grid grid-cols-3 gap-2 pt-2">
+      <div class="grid grid-cols-3 gap-1 col-span-2">
+        <div></div>
+        <button onmousedown="inputs.up=true" onmouseup="inputs.up=false" ontouchstart="inputs.up=true" ontouchend="inputs.up=false" class="bg-slate-800 p-3 rounded-xl active:bg-slate-700 text-center">▲</button>
+        <div></div>
+        <button onmousedown="inputs.left=true" onmouseup="inputs.left=false" ontouchstart="inputs.left=true" ontouchend="inputs.left=false" class="bg-slate-800 p-3 rounded-xl active:bg-slate-700 text-center">◀</button>
+        <button onmousedown="inputs.down=true" onmouseup="inputs.down=false" ontouchstart="inputs.down=true" ontouchend="inputs.down=false" class="bg-slate-800 p-3 rounded-xl active:bg-slate-700 text-center">▼</button>
+        <button onmousedown="inputs.right=true" onmouseup="inputs.right=false" ontouchstart="inputs.right=true" ontouchend="inputs.right=false" class="bg-slate-800 p-3 rounded-xl active:bg-slate-700 text-center">▶</button>
+      </div>
+      <div class="flex items-center justify-center">
+        <button onclick="shoot()" class="w-full h-full bg-rose-600 hover:bg-rose-500 active:bg-rose-700 font-bold rounded-2xl text-xs shadow-lg">
+          FIRE<br>🔥
+        </button>
+      </div>
+    </div>
   </div>
 
   <script>
-    let peer = null;
-    let conn = null;
-    let isHost = false;
-
-    // ゲーム用変数（幅320, 高さ480固定）
-    const CANVAS_WIDTH = 320;
-    const CANVAS_HEIGHT = 480;
-    const PADDLE_RADIUS = 24;
-    const PUCK_RADIUS = 12;
-    const GOAL_WIDTH = 120;
-
+    let peer = null, conn = null, isHost = false;
+    const CANVAS_SIZE = 320;
     let canvas, ctx;
-    let myScore = 0, enemyScore = 0;
 
-    // プレイヤーの位置
-    let myX = CANVAS_WIDTH / 2;
-    let myY = CANVAS_HEIGHT - 60; // 自分は常に画面下側を操作
-    let enemyX = CANVAS_WIDTH / 2;
-    let enemyY = 60;              // 相手は画面上側（同期時に座標反転）
+    // ゲーム状態
+    let myHp = 100, enemyHp = 100;
+    let myTank = { x: 50, y: 270, angle: -Math.PI/2 };
+    let enemyTank = { x: 270, y: 50, angle: Math.PI/2 };
+    let bullets = []; // {x, y, vx, vy, isMy}
 
-    // パック（ホストが物理演算を担当）
-    let puck = {
-      x: CANVAS_WIDTH / 2,
-      y: CANVAS_HEIGHT / 2,
-      vx: 0,
-      vy: 0
-    };
+    // 障害物（固定ブロック）
+    const obstacles = [
+      { x: 60, y: 120, w: 60, h: 20 },
+      { x: 200, y: 180, w: 60, h: 20 },
+      { x: 140, y: 140, w: 40, h: 40 }
+    ];
 
-    // --- 1. P2P接続のセットアップ ---
+    // 入力状態
+    const inputs = { up: false, down: false, left: false, right: false };
+
+    // キーボード操作対応
+    window.addEventListener('keydown', (e) => {
+      if(e.key === 'w' || e.key === 'ArrowUp') inputs.up = true;
+      if(e.key === 's' || e.key === 'ArrowDown') inputs.down = true;
+      if(e.key === 'a' || e.key === 'ArrowLeft') inputs.left = true;
+      if(e.key === 'd' || e.key === 'ArrowRight') inputs.right = true;
+      if(e.key === ' ') shoot();
+    });
+    window.addEventListener('keyup', (e) => {
+      if(e.key === 'w' || e.key === 'ArrowUp') inputs.up = false;
+      if(e.key === 's' || e.key === 'ArrowDown') inputs.down = false;
+      if(e.key === 'a' || e.key === 'ArrowLeft') inputs.left = false;
+      if(e.key === 'd' || e.key === 'ArrowRight') inputs.right = false;
+    });
+
+    // --- P2P接続 ---
     function createRoom() {
       peer = new Peer();
-      document.getElementById('status-text').innerText = "PeerID発行中...";
-
       peer.on('open', (id) => {
         isHost = true;
         document.getElementById('room-id-display').innerText = id;
         document.getElementById('room-id-display').classList.remove('hidden');
         document.getElementById('status-text').innerText = "相手の接続を待っています...";
       });
-
-      peer.on('connection', (connection) => {
-        conn = connection;
-        setupCommunication();
-      });
+      peer.on('connection', (c) => { conn = c; setupCommunication(); });
     }
 
     function joinRoom() {
-      const targetId = document.getElementById('join-room-id').value.trim();
-      if (!targetId) {
-        alert("ルームIDを入力してください");
-        return;
-      }
-
+      const id = document.getElementById('join-room-id').value.trim();
+      if(!id) return alert("IDを入力してください");
       peer = new Peer();
-      document.getElementById('status-text').innerText = "接続中...";
-
       peer.on('open', () => {
         isHost = false;
-        conn = peer.connect(targetId);
+        conn = peer.connect(id);
         setupCommunication();
       });
     }
 
     function setupCommunication() {
       conn.on('open', () => {
-        // ロビーを閉じてゲーム開始
         document.getElementById('lobby-view').classList.add('hidden');
         document.getElementById('game-view').classList.remove('hidden');
         initGame();
       });
 
       conn.on('data', (data) => {
-        if (data.type === 'pos') {
-          // 相手の位置を受信（相手目線の下側座標 → 自分目線の上側座標へ反転）
-          enemyX = CANVAS_WIDTH - data.x;
-          enemyY = CANVAS_HEIGHT - data.y;
-        } else if (data.type === 'gameState') {
-          // ゲスト側はホストからパックとスコアの同期情報を受け取る（座標反転）
-          puck.x = CANVAS_WIDTH - data.puck.x;
-          puck.y = CANVAS_HEIGHT - data.puck.y;
-          myScore = data.scoreHost;   // 相手側の得点が自分側の得点
-          enemyScore = data.scoreGuest;
-          updateScoreDisplay();
+        if (data.type === 'state') {
+          // 相手の位置受取（座標反転）
+          enemyTank.x = CANVAS_SIZE - data.tank.x;
+          enemyTank.y = CANVAS_SIZE - data.tank.y;
+          enemyTank.angle = data.tank.angle + Math.PI;
+
+          // 相手が撃った弾を追加
+          if (data.newBullet) {
+            bullets.push({
+              x: CANVAS_SIZE - data.newBullet.x,
+              y: CANVAS_SIZE - data.newBullet.y,
+              vx: -data.newBullet.vx,
+              vy: -data.newBullet.vy,
+              isMy: false
+            });
+          }
         }
       });
     }
 
-    // --- 2. ゲームメイン処理 ---
+    // --- ゲームループ ---
     function initGame() {
       canvas = document.getElementById('gameCanvas');
       ctx = canvas.getContext('2d');
-
-      // 操作イベント（マウス・タッチ）
-      const handleMove = (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        let x = clientX - rect.left;
-        let y = clientY - rect.top;
-
-        // パドルの動ける範囲を自分のコート（下半分）に制限
-        myX = Math.max(PADDLE_RADIUS, Math.min(CANVAS_WIDTH - PADDLE_RADIUS, x));
-        myY = Math.max(CANVAS_HEIGHT / 2 + PADDLE_RADIUS, Math.min(CANVAS_HEIGHT - PADDLE_RADIUS, y));
-
-        // 自分の位置を相手に送信
-        if (conn && conn.open) {
-          conn.send({ type: 'pos', x: myX, y: myY });
-        }
-      };
-
-      canvas.addEventListener('mousemove', handleMove);
-      canvas.addEventListener('touchmove', handleMove);
-
-      if (isHost) resetPuck();
-
-      // メインゲームループ開始
       requestAnimationFrame(gameLoop);
     }
 
-    function resetPuck() {
-      puck.x = CANVAS_WIDTH / 2;
-      puck.y = CANVAS_HEIGHT / 2;
-      puck.vx = (Math.random() - 0.5) * 4;
-      puck.vy = isHost ? 3 : -3;
+    let lastShot = 0;
+    function shoot() {
+      const now = Date.now();
+      if (now - lastShot < 400 || myHp <= 0) return; // 連射制限
+      lastShot = now;
+
+      const b = {
+        x: myTank.x + Math.cos(myTank.angle) * 15,
+        y: myTank.y + Math.sin(myTank.angle) * 15,
+        vx: Math.cos(myTank.angle) * 5,
+        vy: Math.sin(myTank.angle) * 5,
+        isMy: true
+      };
+      bullets.push(b);
+
+      // 弾を撃ったイベントを送る
+      if (conn && conn.open) {
+        conn.send({
+          type: 'state',
+          tank: myTank,
+          newBullet: { x: b.x, y: b.y, vx: b.vx, vy: b.vy }
+        });
+      }
+
+      if (navigator.vibrate) navigator.vibrate(30);
     }
 
     function gameLoop() {
-      if (isHost) {
-        updatePhysics();
-        // ホストがゲーム全状態を同期送信
-        if (conn && conn.open) {
-          conn.send({
-            type: 'gameState',
-            puck: { x: puck.x, y: puck.y },
-            scoreHost: enemyScore, // ホスト目線でのGuest得点
-            scoreGuest: myScore   // ホスト目線でのHost得点
-          });
-        }
+      updateTank();
+      updateBullets();
+      
+      // 定期的に自機位置を送信
+      if (conn && conn.open && Math.random() < 0.3) {
+        conn.send({ type: 'state', tank: myTank });
       }
 
       draw();
       requestAnimationFrame(gameLoop);
     }
 
-    // --- 3. 物理演算（ホストのみ実行） ---
-    function updatePhysics() {
-      puck.x += puck.vx;
-      puck.y += puck.vy;
+    function updateTank() {
+      if (myHp <= 0) return;
+      const speed = 2;
+      const rotSpeed = 0.05;
 
-      // 摩擦減速
-      puck.vx *= 0.99;
-      puck.vy *= 0.99;
+      if (inputs.left) myTank.angle -= rotSpeed;
+      if (inputs.right) myTank.angle += rotSpeed;
 
-      // 壁反射（左右）
-      if (puck.x - PUCK_RADIUS < 0 || puck.x + PUCK_RADIUS > CANVAS_WIDTH) {
-        puck.vx *= -1;
-        puck.x = puck.x - PUCK_RADIUS < 0 ? PUCK_RADIUS : CANVAS_WIDTH - PUCK_RADIUS;
+      let nextX = myTank.x;
+      let nextY = myTank.y;
+
+      if (inputs.up) {
+        nextX += Math.cos(myTank.angle) * speed;
+        nextY += Math.sin(myTank.angle) * speed;
+      }
+      if (inputs.down) {
+        nextX -= Math.cos(myTank.angle) * speed;
+        nextY -= Math.sin(myTank.angle) * speed;
       }
 
-      // 壁反射＆ゴール判定（上下）
-      const goalLeft = (CANVAS_WIDTH - GOAL_WIDTH) / 2;
-      const goalRight = (CANVAS_WIDTH + GOAL_WIDTH) / 2;
-
-      // 上壁（相手ゴール）
-      if (puck.y - PUCK_RADIUS < 0) {
-        if (puck.x > goalLeft && puck.x < goalRight) {
-          myScore++; // 自分（Host）のゴール！
-          updateScoreDisplay();
-          resetPuck();
-          return;
-        } else {
-          puck.vy *= -1;
-          puck.y = PUCK_RADIUS;
+      // 壁・障害物判定
+      if (nextX > 10 && nextX < CANVAS_SIZE - 10 && nextY > 10 && nextY < CANVAS_SIZE - 10) {
+        let collide = false;
+        for (let obs of obstacles) {
+          if (nextX > obs.x && nextX < obs.x + obs.w && nextY > obs.y && nextY < obs.y + obs.h) {
+            collide = true;
+            break;
+          }
+        }
+        if (!collide) {
+          myTank.x = nextX;
+          myTank.y = nextY;
         }
       }
+    }
 
-      // 下壁（自分ゴール）
-      if (puck.y + PUCK_RADIUS > CANVAS_HEIGHT) {
-        if (puck.x > goalLeft && puck.x < goalRight) {
-          enemyScore++; // 相手（Guest）のゴール！
-          updateScoreDisplay();
-          resetPuck();
-          return;
-        } else {
-          puck.vy *= -1;
-          puck.y = CANVAS_HEIGHT - PUCK_RADIUS;
+    function updateBullets() {
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+
+        // 壁判定
+        if (b.x < 0 || b.x > CANVAS_SIZE || b.y < 0 || b.y > CANVAS_SIZE) {
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        // 障害物判定
+        let hitObs = false;
+        for (let obs of obstacles) {
+          if (b.x > obs.x && b.x < obs.x + obs.w && b.y > obs.y && b.y < obs.y + obs.h) {
+            hitObs = true;
+            break;
+          }
+        }
+        if (hitObs) {
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        // 敵の弾が「自分」に当たったか判定
+        if (!b.isMy) {
+          const dist = Math.hypot(b.x - myTank.x, b.y - myTank.y);
+          if (dist < 12) {
+            myHp = Math.max(0, myHp - 15);
+            document.getElementById('hp-you').style.width = myHp + '%';
+            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            bullets.splice(i, 1);
+          }
         }
       }
-
-      // パドル当たり判定（自分）
-      checkPaddleCollision(myX, myY);
-      // パドル当たり判定（相手）
-      checkPaddleCollision(enemyX, enemyY);
     }
 
-    function checkPaddleCollision(px, py) {
-      const dx = puck.x - px;
-      const dy = puck.y - py;
-      const dist = Math.hypot(dx, dy);
-      const minDist = PADDLE_RADIUS + PUCK_RADIUS;
-
-      if (dist < minDist) {
-        const angle = Math.atan2(dy, dx);
-        const speed = Math.max(5, Math.hypot(puck.vx, puck.vy) + 1);
-        
-        puck.vx = Math.cos(angle) * speed;
-        puck.vy = Math.sin(angle) * speed;
-
-        // 埋まり防止
-        puck.x = px + Math.cos(angle) * minDist;
-        puck.y = py + Math.sin(angle) * minDist;
-      }
-    }
-
-    function updateScoreDisplay() {
-      document.getElementById('score-you').innerText = myScore;
-      document.getElementById('score-enemy').innerText = enemyScore;
-    }
-
-    // --- 4. 描画処理 ---
     function draw() {
-      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // コート中央線
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, CANVAS_HEIGHT / 2);
-      ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT / 2);
-      ctx.stroke();
+      // 障害物描画
+      ctx.fillStyle = '#475569';
+      for (let obs of obstacles) {
+        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+      }
 
-      // ゴールライン描画
-      const goalLeft = (CANVAS_WIDTH - GOAL_WIDTH) / 2;
-      ctx.fillStyle = '#f43f5e'; // 敵ゴール（赤）
-      ctx.fillRect(goalLeft, 0, GOAL_WIDTH, 4);
-      ctx.fillStyle = '#6366f1'; // 自分ゴール（青）
-      ctx.fillRect(goalLeft, CANVAS_HEIGHT - 4, GOAL_WIDTH, 4);
+      // 弾描画
+      for (let b of bullets) {
+        ctx.fillStyle = b.isMy ? '#818cf8' : '#f87171';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-      // パック（球）
-      ctx.fillStyle = '#f59e0b';
-      ctx.beginPath();
-      ctx.arc(puck.x, puck.y, PUCK_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
+      // 自機（青）
+      drawTank(myTank.x, myTank.y, myTank.angle, '#6366f1');
+      // 敵機（赤）
+      drawTank(enemyTank.x, enemyTank.y, enemyTank.angle, '#f43f5e');
+    }
 
-      // 相手パドル（上）
-      ctx.fillStyle = '#f43f5e';
-      ctx.beginPath();
-      ctx.arc(enemyX, enemyY, PADDLE_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
+    function drawTank(x, y, angle, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
 
-      // 自分パドル（下）
-      ctx.fillStyle = '#6366f1';
-      ctx.beginPath();
-      ctx.arc(myX, myY, PADDLE_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
+      // 車体
+      ctx.fillStyle = color;
+      ctx.fillRect(-10, -10, 20, 20);
+
+      // 砲身
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, -2, 14, 4);
+
+      ctx.restore();
     }
   </script>
 </body>
