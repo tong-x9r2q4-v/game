@@ -16,8 +16,8 @@
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-slate-950">
 
   <!-- ヘッダー -->
-  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
-    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-amber-400 flex items-center justify-center text-xl font-black text-slate-950 shadow-lg shadow-cyan-500/20">
           T
@@ -27,24 +27,37 @@
           <p class="text-[10px] text-slate-400 font-medium">毎週月曜 10:00AM 新作解禁</p>
         </div>
       </div>
-      <div class="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-full text-xs text-slate-300">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-        <span class="font-bold">1週間限定プレイ</span>
+
+      <!-- ログイン / ユーザー情報エリア -->
+      <div id="user-profile-bar" class="flex items-center space-x-3">
+        <button id="login-btn" onclick="toggleLogin()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition">
+          🔑 ログイン / 会員登録
+        </button>
+        <div id="user-info" class="hidden flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1 rounded-xl">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span id="username-display" class="text-xs font-bold text-cyan-400">ゲストプレイヤー</span>
+          <span class="text-[10px] text-slate-500">☁️ クラウド同期中</span>
+        </div>
       </div>
     </div>
   </header>
 
   <!-- メインコンテンツ -->
-  <main class="max-w-4xl mx-auto px-4 py-8 w-full space-y-10">
+  <main class="max-w-5xl mx-auto px-4 py-8 w-full space-y-10">
 
-    <!-- 今週のゲーム（自動切り替え対応メインセクション） -->
+    <!-- 今週のゲーム（メインセクション） -->
     <section class="relative bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
       <div class="absolute -top-12 -right-12 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div class="flex flex-col md:flex-row gap-6 items-center justify-between">
+      <div class="flex flex-col md:flex-row gap-6 items-start justify-between">
         <div class="space-y-4 text-center md:text-left flex-1">
-          <div class="inline-flex items-center space-x-2 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs px-3 py-1 rounded-full font-bold">
-            <span>🔥 今週の無料公開ゲーム</span>
+          <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
+            <span class="bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs px-3 py-1 rounded-full font-bold">
+              🔥 今週の無料公開ゲーム
+            </span>
+            <button id="fav-btn" onclick="toggleFavorite()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1 rounded-full font-bold text-slate-300 transition">
+              ⭐ お気に入りに追加
+            </button>
           </div>
 
           <h1 id="current-title" class="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
@@ -55,33 +68,128 @@
             <!-- JavaScriptで動的生成 -->
           </p>
 
-          <!-- 次回更新（月曜10時）までのカウントダウン -->
-          <div class="pt-2 bg-slate-950/60 border border-slate-800/80 rounded-2xl p-4 inline-block w-full md:w-auto">
-            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 text-center md:text-left">
-              次回更新（来週月曜 10:00）まで
+          <!-- カウントダウン & リマインダー -->
+          <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
+            <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3 px-4 w-full sm:w-auto">
+              <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 text-center sm:text-left">
+                次回更新（月曜 10:00）まで
+              </div>
+              <div id="countdown-timer" class="text-xl font-mono font-black text-amber-400 text-center sm:text-left">
+                00日 00時間 00分 00秒
+              </div>
             </div>
-            <div id="countdown-timer" class="text-2xl font-mono font-black text-amber-400 text-center md:text-left">
-              00日 00時間 00分 00秒
-            </div>
+
+            <!-- カレンダーリマインダー追加ボタン -->
+            <button onclick="addToGoogleCalendar()" class="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl text-xs font-bold text-slate-300 flex items-center justify-center space-x-2 transition">
+              <span>📅</span>
+              <span>更新日をカレンダーに登録</span>
+            </button>
           </div>
 
-          <div class="pt-2">
-            <button onclick="playCurrentGame()" class="glow-effect w-full md:w-auto px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-lg shadow-lg shadow-cyan-500/20 active:scale-95 transition">
+          <!-- プレイ・招待ボタン群 -->
+          <div class="pt-2 flex flex-wrap gap-3 justify-center md:justify-start">
+            <button onclick="playCurrentGame()" class="glow-effect px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-lg shadow-lg shadow-cyan-500/20 active:scale-95 transition">
               今すぐ遊ぶ！ 🚀
             </button>
           </div>
         </div>
 
-        <!-- ゲームアイコン/ビジュアルプレビュー -->
-        <div class="w-full md:w-60 h-52 bg-slate-950 rounded-2xl border border-slate-800 flex flex-col items-center justify-center p-4 text-center relative group">
-          <div id="current-icon" class="text-6xl mb-3 group-hover:scale-110 transition duration-300">🎮</div>
-          <span class="text-xs font-bold text-slate-400">1週間限定アクセス</span>
-          <span class="text-[10px] text-slate-600 mt-1">月曜 10:00 に自動入替</span>
+        <!-- プレビュー & ワンクリック招待 -->
+        <div class="w-full md:w-64 bg-slate-950 rounded-2xl border border-slate-800 p-4 text-center space-y-3">
+          <div id="current-icon" class="text-6xl my-2">🎮</div>
+          <div class="border-t border-slate-800 pt-3">
+            <span class="text-[10px] text-slate-400 font-bold block mb-2">🤝 フレンドを直接招待</span>
+            <button onclick="sendDirectInvite()" class="w-full py-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl transition">
+              コード不要で一緒に遊ぶ ✉️
+            </button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- 来週の予告 & アーカイブ -->
+    <!-- タブエリア：ランキング / 限定実績 / フレンド一覧 -->
+    <section class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+      <div class="flex border-b border-slate-800 mb-6 space-x-4 overflow-x-auto pb-2">
+        <button onclick="switchTab('ranking')" id="tab-ranking" class="text-sm font-bold pb-2 border-b-2 border-cyan-400 text-cyan-400 transition">
+          🏆 今週のランキング
+        </button>
+        <button onclick="switchTab('achievements')" id="tab-achievements" class="text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+          🎖️ 限定実績バッジ
+        </button>
+        <button onclick="switchTab('friends')" id="tab-friends" class="text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+          👥 フレンドリスト (<span id="friend-count">2</span>)
+        </button>
+      </div>
+
+      <!-- 1. ランキング表示 -->
+      <div id="view-ranking" class="space-y-3">
+        <div class="flex items-center justify-between text-xs text-slate-400 px-3 py-1 font-bold">
+          <span>順位 / プレイヤー</span>
+          <span>ハイスコア (毎週月曜リセット)</span>
+        </div>
+        <div id="ranking-list" class="space-y-2">
+          <!-- JSで動的生成 -->
+        </div>
+      </div>
+
+      <!-- 2. 限定実績表示 -->
+      <div id="view-achievements" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center space-x-3">
+          <span class="text-3xl">🏅</span>
+          <div>
+            <div class="text-xs font-bold text-slate-200">初陣の証</div>
+            <div class="text-[10px] text-slate-500">ゲームを1回プレイした</div>
+            <span class="inline-block mt-1 text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">獲得済み</span>
+          </div>
+        </div>
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center space-x-3 opacity-60">
+          <span class="text-3xl">🔒</span>
+          <div>
+            <div class="text-xs font-bold text-slate-200">防衛のスペシャリスト</div>
+            <div class="text-[10px] text-slate-500">ツイン・タワーでWAVE3クリア</div>
+            <span class="inline-block mt-1 text-[9px] bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-bold">未獲得</span>
+          </div>
+        </div>
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center space-x-3">
+          <span class="text-3xl">⭐</span>
+          <div>
+            <div class="text-xs font-bold text-slate-200">常連プレイヤー</div>
+            <div class="text-[10px] text-slate-500">3週連続でポータル訪問</div>
+            <span class="inline-block mt-1 text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">獲得済み</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. フレンドリスト表示 -->
+      <div id="view-friends" class="hidden space-y-3">
+        <div class="flex items-center justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-full bg-cyan-600 flex items-center justify-center font-bold text-xs">A</div>
+            <div>
+              <div class="text-xs font-bold text-slate-200">Alex_Gamer</div>
+              <div class="text-[10px] text-emerald-400">オンライン (ロビー待機中)</div>
+            </div>
+          </div>
+          <button onclick="inviteFriend('Alex_Gamer')" class="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 font-bold text-xs rounded-xl text-slate-950 transition">
+            一緒に遊ぶ 🎮
+          </button>
+        </div>
+        <div class="flex items-center justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center font-bold text-xs">T</div>
+            <div>
+              <div class="text-xs font-bold text-slate-200">Taro_123</div>
+              <div class="text-[10px] text-slate-500">オフライン (最終ログイン: 昨日)</div>
+            </div>
+          </div>
+          <button disabled class="px-3 py-1 bg-slate-800 text-slate-600 font-bold text-xs rounded-xl cursor-not-allowed">
+            オフライン
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 来週の予告 & アーカイブ・復刻リクエスト -->
     <div class="grid md:grid-cols-2 gap-6">
       
       <!-- 来週の予告 -->
@@ -103,19 +211,19 @@
         </div>
       </section>
 
-      <!-- 過去に公開されたゲーム（アーカイブ） -->
+      <!-- アーカイブ & 復刻リクエスト -->
       <section class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
         <div>
           <div class="inline-flex items-center space-x-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs px-3 py-1 rounded-full font-bold mb-3">
-            <span>📦 ARCHIVE</span>
+            <span>📦 ARCHIVE & REQUEST</span>
           </div>
-          <h2 class="text-xl font-bold text-white mb-2">公開終了したゲーム</h2>
+          <h2 class="text-xl font-bold text-white mb-2">公開終了ゲームと復刻リクエスト</h2>
           <div id="archive-list" class="space-y-2 mt-3">
             <!-- JavaScriptで動的生成 -->
           </div>
         </div>
         <div class="mt-6 pt-4 border-t border-slate-800/60 text-[10px] text-slate-500">
-          ※ 1週間限定配信のため、公開が終了した作品は現在プレイできません。
+          ※ 投票数の多いゲームは特別復刻イベントで再登場します。
         </div>
       </section>
 
@@ -125,10 +233,10 @@
 
   <!-- フッター -->
   <footer class="border-t border-slate-800 bg-slate-900/30 py-6 text-center text-xs text-slate-500 mt-8">
-    <p>© 2026 TongGames. All rights reserved.</p>
+    <p>© 2026 TongGames. All rights reserved. (Cloud Data Synced)</p>
   </footer>
 
-  <!-- 擬似モーダル（ゲーム画面） -->
+  <!-- 擬似ゲーム起動モーダル -->
   <div id="game-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden z-50 flex-col items-center justify-center p-4">
     <div class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl p-6 space-y-4 relative text-center shadow-2xl">
       <button onclick="closeGame()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl">✕</button>
@@ -136,7 +244,7 @@
       
       <div class="p-12 bg-slate-950 rounded-2xl border border-slate-800 text-slate-400 text-sm flex flex-col items-center justify-center space-y-3">
         <div id="modal-icon" class="text-5xl">🎮</div>
-        <p id="modal-msg" class="text-xs text-slate-500">[ ここにゲーム本体のコードが読み込まれます ]</p>
+        <p id="modal-msg" class="text-xs text-slate-500">[ ここにゲーム本体のコードが実行されます ]</p>
       </div>
 
       <button onclick="closeGame()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl text-slate-300 transition">
@@ -146,108 +254,197 @@
   </div>
 
   <script>
-    // --- 1. ゲームのローテーション配信リストデータ ---
+    // --- 1. ゲームスケジュール構造 ---
     const gameSchedule = [
       {
         id: "game-1",
         title: "🛡️🤖🔫 ツイン・タワー・バスター (3D)",
         desc: "2人で1つの拠点と巨大砲台を操作して迫りくる敵から防衛せよ！PeerJS対応でオンライン協力プレイが可能。",
-        icon: "🤖"
+        icon: "🤖",
+        ranking: [
+          { name: "Sora_Tong", score: "WAVE 3 クリア (12,400pt)" },
+          { name: "Alex_Gamer", score: "WAVE 3 クリア (10,800pt)" },
+          { name: "ゲスト_99", score: "WAVE 2 クリア (6,200pt)" }
+        ]
       },
       {
         id: "game-2",
         title: "✊✌️✋ 超速！心理戦じゃんけんバトル",
         desc: "心理戦とスピードが交錯する新感覚対戦ゲーム。相手の手を読んで連続勝利を狙え！",
-        icon: "✊"
+        icon: "✊",
+        ranking: [
+          { name: "Master_J", score: "15連勝" },
+          { name: "Sora_Tong", score: "12連勝" },
+          { name: "Taro_123", score: "8連勝" }
+        ]
       },
       {
         id: "game-3",
         title: "🏃‍♂️💨 霧の中の鬼ごっこ (3D)",
         desc: "足音と波紋だけを頼りに視界の狭い迷路を逃げ切る、ハラハラドキドキのオンライン対戦。",
-        icon: "👻"
-      },
-      {
-        id: "game-4",
-        title: "🎨 リアルタイム陣取りラグナロク",
-        desc: "制限時間60秒！自分の色のペンキを撃ちまくってステージを塗りつぶせ！",
-        icon: "🎨"
+        icon: "👻",
+        ranking: [
+          { name: "Ninja_X", score: "生存時間 03:00 (完全勝利)" },
+          { name: "Alex_Gamer", score: "生存時間 02:15" }
+        ]
       }
     ];
 
-    // 基準日（2026年1月5日 月曜日 10:00 AM）
     const BASE_MONDAY_10AM = new Date(2026, 0, 5, 10, 0, 0).getTime();
     const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-    // --- 2. 現在の週インデックスと次回更新日時（月曜10:00）を計算 ---
+    // クラウド保存用ローカルステート
+    let isLoggedIN = false;
+    let isFavorite = false;
+    let voteCounts = { "game-2": 142, "game-3": 89 };
+
     function getScheduleState() {
       const now = new Date().getTime();
       const timePassed = now - BASE_MONDAY_10AM;
-
       let weekIndex = Math.floor(timePassed / ONE_WEEK_MS);
       if (weekIndex < 0) weekIndex = 0;
-
       const nextSwitchTime = BASE_MONDAY_10AM + ((weekIndex + 1) * ONE_WEEK_MS);
-
       return { weekIndex, nextSwitchTime };
     }
 
-    // --- 3. UIの動的更新 ---
+    // --- 2. メインレンダリング ---
     function renderPortal() {
       const { weekIndex, nextSwitchTime } = getScheduleState();
-
-      // 今週・来週・過去のインデックスを計算（ループ対応）
       const currentIdx = weekIndex % gameSchedule.length;
       const nextIdx = (weekIndex + 1) % gameSchedule.length;
 
       const currentGame = gameSchedule[currentIdx];
       const nextGame = gameSchedule[nextIdx];
 
-      // 今週のゲーム反映
       document.getElementById('current-title').innerText = currentGame.title;
       document.getElementById('current-desc').innerText = currentGame.desc;
       document.getElementById('current-icon').innerText = currentGame.icon;
 
-      // 来週の予告反映
       document.getElementById('next-title').innerText = nextGame.title;
       document.getElementById('next-desc').innerText = nextGame.desc;
 
-      // アーカイブ一覧の生成
+      // ランキング描画
+      const rankingContainer = document.getElementById('ranking-list');
+      rankingContainer.innerHTML = '';
+      currentGame.ranking.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800 text-xs";
+        div.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <span class="font-black text-amber-400 w-4">#${idx + 1}</span>
+            <span class="font-bold text-slate-200">${item.name}</span>
+          </div>
+          <span class="font-mono text-cyan-400 font-bold">${item.score}</span>
+        `;
+        rankingContainer.appendChild(div);
+      });
+
+      // アーカイブ & 復刻リクエスト描画
       const archiveContainer = document.getElementById('archive-list');
       archiveContainer.innerHTML = '';
 
-      if (weekIndex === 0) {
-        archiveContainer.innerHTML = '<p class="text-xs text-slate-600 italic">まだ公開終了したゲームはありません。</p>';
-      } else {
-        // 過去最大3件表示
-        for (let i = 1; i <= Math.min(3, weekIndex); i++) {
-          const pastIdx = (weekIndex - i) % gameSchedule.length;
-          const pastGame = gameSchedule[pastIdx];
-
-          const item = document.createElement('div');
-          item.className = "flex items-center justify-between bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/80 text-xs";
-          item.innerHTML = `
-            <div class="flex items-center space-x-2 opacity-60">
-              <span>${pastGame.icon}</span>
-              <span class="font-bold text-slate-300">${pastGame.title}</span>
+      gameSchedule.forEach((game, idx) => {
+        if (idx !== currentIdx) {
+          const votes = voteCounts[game.id] || 0;
+          const div = document.createElement('div');
+          div.className = "flex items-center justify-between bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 text-xs";
+          div.innerHTML = `
+            <div class="flex items-center space-x-2">
+              <span>${game.icon}</span>
+              <span class="font-bold text-slate-300">${game.title}</span>
             </div>
-            <span class="text-[10px] text-slate-600 bg-slate-900 px-2 py-0.5 rounded">公開終了</span>
+            <button onclick="requestRelist('${game.id}')" class="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-300 rounded-lg text-[10px] font-bold transition">
+              復刻リクエスト (🗳️ ${votes})
+            </button>
           `;
-          archiveContainer.appendChild(item);
+          archiveContainer.appendChild(div);
         }
-      }
+      });
 
-      // カウントダウンタイマー更新
       updateCountdown(nextSwitchTime);
     }
 
-    // カウントダウンタイマー処理
+    // --- 3. 新機能の動作ロジック ---
+
+    // ログイン切り替え (クラウド保存模擬)
+    function toggleLogin() {
+      isLoggedIN = !isLoggedIN;
+      const btn = document.getElementById('login-btn');
+      const info = document.getElementById('user-info');
+
+      if (isLoggedIN) {
+        btn.classList.add('hidden');
+        info.classList.remove('hidden');
+        info.classList.add('flex');
+        alert("クラウドアカウントにログインしました。進捗と実績がクラウド同期されます。");
+      } else {
+        btn.classList.remove('hidden');
+        info.classList.add('hidden');
+        info.classList.remove('flex');
+      }
+    }
+
+    // お気に入り切り替え
+    function toggleFavorite() {
+      isFavorite = !isFavorite;
+      const btn = document.getElementById('fav-btn');
+      if (isFavorite) {
+        btn.innerText = "★ お気に入り登録中";
+        btn.className = "bg-amber-500/20 border border-amber-500/40 text-xs px-3 py-1 rounded-full font-bold text-amber-300 transition";
+      } else {
+        btn.innerText = "⭐ お気に入りに追加";
+        btn.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1 rounded-full font-bold text-slate-300 transition";
+      }
+    }
+
+    // コード不要の直接招待
+    function sendDirectInvite() {
+      const inviteUrl = window.location.href.split('?')[0] + "?invite=direct_room_9921";
+      navigator.clipboard.writeText(inviteUrl);
+      alert("直接参加用のURLをコピーしました！\nフレンドに送信すれば、ルームコード入力なしでそのまま合流できます：\n" + inviteUrl);
+    }
+
+    function inviteFriend(friendName) {
+      alert(`${friendName} さんにゲーム招待通知を送信しました！相手が承認するとゲームが開きます。`);
+    }
+
+    // カレンダー登録 (.icsファイル生成 & GoogleカレンダーURL)
+    function addToGoogleCalendar() {
+      const { nextSwitchTime } = getScheduleState();
+      const startDate = new Date(nextSwitchTime).toISOString().replace(/-|:|\.\d\d\d/g, "");
+      const endDate = new Date(nextSwitchTime + 3600000).toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+      const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=TongGames+新作解禁&dates=${startDate}/${endDate}&details=週替わりの新作限定ブラウザゲームが公開されました！ポータルをチェックしよう。`;
+      window.open(gcalUrl, '_blank');
+    }
+
+    // 復刻リクエスト
+    function requestRelist(gameId) {
+      voteCounts[gameId] = (voteCounts[gameId] || 0) + 1;
+      renderPortal();
+      alert("復刻リクエストを送信しました！");
+    }
+
+    // タブ切り替え
+    function switchTab(tabName) {
+      ['ranking', 'achievements', 'friends'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+        const tabBtn = document.getElementById(`tab-${t}`);
+        tabBtn.className = "text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition";
+      });
+
+      document.getElementById(`view-${tabName}`).classList.remove('hidden');
+      const activeTab = document.getElementById(`tab-${tabName}`);
+      activeTab.className = "text-sm font-bold pb-2 border-b-2 border-cyan-400 text-cyan-400 transition";
+    }
+
+    // カウントダウン処理
     function updateCountdown(targetTime) {
       function tick() {
         const now = new Date().getTime();
         const diff = targetTime - now;
 
         if (diff <= 0) {
-          // 月曜10時を超えたら自動リロードして次のゲームに切替
           renderPortal();
           return;
         }
@@ -260,16 +457,13 @@
         document.getElementById('countdown-timer').innerText = 
           `${String(days).padStart(2, '0')}日 ${String(hours).padStart(2, '0')}時間 ${String(minutes).padStart(2, '0')}分 ${String(seconds).padStart(2, '0')}秒`;
       }
-
       tick();
       setInterval(tick, 1000);
     }
 
-    // モーダル表示機能
     function playCurrentGame() {
       const { weekIndex } = getScheduleState();
       const currentGame = gameSchedule[weekIndex % gameSchedule.length];
-
       document.getElementById('modal-title').innerText = `${currentGame.title} を起動中...`;
       document.getElementById('modal-icon').innerText = currentGame.icon;
       document.getElementById('game-modal').classList.remove('hidden');
@@ -281,7 +475,6 @@
       document.getElementById('game-modal').classList.remove('flex');
     }
 
-    // 初期化実行
     renderPortal();
   </script>
 </body>
