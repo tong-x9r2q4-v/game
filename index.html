@@ -10,9 +10,21 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     body { touch-action: none; overflow: hidden; }
+    
+    /* 隠し発動時の画面一瞬フラッシュ演出 */
+    @keyframes secretFlashAnimation {
+      0% { opacity: 0.8; }
+      100% { opacity: 0; }
+    }
+    .secret-flash {
+      animation: secretFlashAnimation 0.15s ease-out forwards;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col items-center justify-center p-2 select-none">
+
+  <!-- 自分だけにしか見えない隠し発動用フラッシュオーバーレイ -->
+  <div id="secret-flash-overlay" class="pointer-events-none fixed inset-0 bg-cyan-300 opacity-0 z-50"></div>
 
   <!-- 1. ロビー画面 -->
   <div id="lobby-view" class="w-full max-w-sm bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl space-y-6 text-center z-10">
@@ -327,8 +339,10 @@
           tapPattern.shift();
         }
 
-        if (tapPattern.length === SOS_PATTERN.length && tapPattern.every((v, i) => v === SOS_PATTERN[i])) {
+        // コマンド達成判定
+        if (!secretModeActive && tapPattern.length === SOS_PATTERN.length && tapPattern.every((v, i) => v === SOS_PATTERN[i])) {
           secretModeActive = true;
+          triggerFlashEffect(); // 自分だけの画面一瞬発光
         }
 
         executeShootAction();
@@ -338,6 +352,14 @@
       btn.addEventListener('touchend', onEnd);
       btn.addEventListener('mousedown', onStart);
       btn.addEventListener('mouseup', onEnd);
+    }
+
+    // 画面一瞬発光処理
+    function triggerFlashEffect() {
+      const flashOverlay = document.getElementById('secret-flash-overlay');
+      flashOverlay.classList.remove('secret-flash');
+      void flashOverlay.offsetWidth; // リフロー発生させてアニメーションリセット
+      flashOverlay.classList.add('secret-flash');
     }
 
     function executeShootAction() {
@@ -561,20 +583,17 @@
     function updateBombs() {
       for (let i = activeBombs.length - 1; i >= 0; i--) {
         let b = activeBombs[i];
-        b.mesh.position.y -= 0.6; // 落下の速さ
+        b.mesh.position.y -= 0.6;
 
         if (b.mesh.position.y <= 0.5) {
-          // 着地・爆発
           scene.remove(b.mesh);
 
           if (b.isMy) {
-            // 自作の爆弾（敵を一撃撃破）
             enemyHp = 0;
             document.getElementById('hp-enemy').style.width = '0%';
             if (conn && conn.open) conn.send({ type: 'hit', damage: 100 });
             endGame(true);
           } else {
-            // 被弾（一撃撃破）
             myHp = 0;
             document.getElementById('hp-you').style.width = '0%';
             takeDamage(100);
@@ -742,4 +761,3 @@
   </script>
 </body>
 </html>
-  
