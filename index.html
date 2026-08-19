@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>3D ウォーターバトル P2P</title>
+  <title>3D TPS ウォーターバトル P2P</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <!-- 3D描画用 Three.js -->
@@ -18,9 +18,9 @@
   <!-- 1. ロビー画面 -->
   <div id="lobby-view" class="w-full max-w-sm bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl space-y-6 text-center z-10">
     <div>
-      <div class="text-4xl mb-2">💦</div>
-      <h1 class="text-xl font-bold text-slate-100">3D ウォーターバトル</h1>
-      <p class="text-xs text-slate-400 mt-1">水鉄砲で水をかけ合おう！全年齢対象P2Pアクション</p>
+      <div class="text-4xl mb-2">🔫</div>
+      <h1 class="text-xl font-bold text-slate-100">3D TPS ウォーターバトル</h1>
+      <p class="text-xs text-slate-400 mt-1">人目線（TPS視点）で挑む水鉄砲バトル！</p>
     </div>
 
     <!-- ホスト -->
@@ -67,8 +67,13 @@
     </div>
 
     <!-- 3Dキャンバス表示エリア -->
-    <div class="relative w-full h-[360px] rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-950">
+    <div class="relative w-full h-[380px] rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-950">
       <div id="canvas-container" class="w-full h-full"></div>
+
+      <!-- カウントダウン表示 -->
+      <div id="countdown-overlay" class="hidden absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] rounded-2xl flex items-center justify-center z-10">
+        <div id="countdown-text" class="text-7xl font-black text-amber-400 drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] scale-125 transition-transform duration-200">3</div>
+      </div>
 
       <!-- 勝敗・再戦待機オーバレイ -->
       <div id="result-overlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center space-y-4 z-20">
@@ -80,11 +85,11 @@
       </div>
     </div>
 
-    <!-- 操作エリア（ジョイスティック ＋ WATER SHOTボタン） -->
+    <!-- 操作エリア（ジョイスティック ＋ FIRE） -->
     <div class="w-full h-32 bg-slate-800/60 backdrop-blur rounded-2xl border border-slate-700 relative overflow-hidden flex items-center justify-between px-6">
       <!-- ジョイスティック（左側） -->
       <div id="touch-zone" class="w-36 h-full flex items-center justify-center relative touch-none">
-        <div class="text-[10px] text-slate-500 pointer-events-none">ドラッグ移動</div>
+        <div class="text-[10px] text-slate-500 pointer-events-none">移動・旋回</div>
         <div id="stick-base" class="hidden absolute w-16 h-16 bg-slate-700/60 rounded-full border border-slate-500/50 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
           <div id="stick-knob" class="absolute w-8 h-8 bg-cyan-500/80 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
         </div>
@@ -100,37 +105,34 @@
 
   <script>
     let peer = null, conn = null, isHost = false;
-    const FIELD_SIZE = 20; // 3Dステージのサイズ
+    const FIELD_SIZE = 24;
     let isGameOver = false;
+    let isGamePlaying = false; // カウントダウン中は操作不可
     let myRetryReady = false, enemyRetryReady = false;
 
     // HP設定 (100 -> 0)
     let myHp = 100, enemyHp = 100;
     let myPos = { x: -6, z: 6, angle: 0 };
     let enemyPos = { x: 6, z: -6, angle: Math.PI };
-    let waterBullets = []; // 水の玉オブジェクト保持用
+    let waterBullets = [];
 
-    // 障害物データ (X, Z, Width, Depth)
+    // 障害物データ
     const obstaclesData = [
       { x: -3, z: -2, w: 3, d: 3 },
       { x: 3, z: 2, w: 3, d: 3 },
       { x: 0, z: 0, w: 2.5, d: 2.5 }
     ];
 
-    // ジョイスティック変数
     let joystickVector = { x: 0, y: 0, active: false };
 
-    // --- Three.js 用変数 ---
+    // Three.js 変数
     let scene, camera, renderer;
     let myStickman, enemyStickman;
-    let obstacleMeshes = [];
 
-    // --- 1. P2P接続設定 ---
+    // --- P2P 接続処理 ---
     function createRoom() {
       const shortCode = Math.floor(1000 + Math.random() * 9000).toString();
-      const fullRoomId = 'water-battle-' + shortCode;
-
-      peer = new Peer(fullRoomId);
+      peer = new Peer('water-battle-' + shortCode);
       document.getElementById('status-text').innerText = "部屋を作成中...";
 
       peer.on('open', () => {
@@ -167,11 +169,11 @@
         document.getElementById('lobby-view').classList.add('hidden');
         document.getElementById('game-view').classList.remove('hidden');
         init3DGame();
+        startCountdown();
       });
 
       conn.on('data', (data) => {
         if (data.type === 'state' && !isGameOver) {
-          // 相手の位置と回転を反転して同期
           enemyPos.x = -data.pos.x;
           enemyPos.z = -data.pos.z;
           enemyPos.angle = data.pos.angle + Math.PI;
@@ -189,50 +191,72 @@
       });
     }
 
-    // --- 2. 3D空間・棒人間生成 ---
+    // --- カウントダウン処理 ---
+    function startCountdown() {
+      isGamePlaying = false;
+      const overlay = document.getElementById('countdown-overlay');
+      const text = document.getElementById('countdown-text');
+      overlay.classList.remove('hidden');
+
+      let count = 3;
+      text.innerText = count;
+
+      const timer = setInterval(() => {
+        count--;
+        if (count > 0) {
+          text.innerText = count;
+        } else if (count === 0) {
+          text.innerText = "GO!";
+          text.className = "text-6xl font-black text-emerald-400 drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]";
+        } else {
+          clearInterval(timer);
+          overlay.classList.add('hidden');
+          text.className = "text-7xl font-black text-amber-400 drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]";
+          isGamePlaying = true;
+        }
+      }, 900);
+    }
+
+    // --- 3D描画・人目線（TPS視点）モデル構築 ---
     function init3DGame() {
       const container = document.getElementById('canvas-container');
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x0f172a);
 
-      camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-      camera.position.set(0, 16, 16);
-      camera.lookAt(0, 0, 0);
+      camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
       // ライト
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
       scene.add(ambientLight);
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
       dirLight.position.set(10, 20, 10);
       scene.add(dirLight);
 
-      // 床（プール風）
+      // 床
       const floorGeo = new THREE.PlaneGeometry(FIELD_SIZE, FIELD_SIZE);
-      const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2 });
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
       const floor = new THREE.Mesh(floorGeo, floorMat);
       floor.rotation.x = -Math.PI / 2;
       scene.add(floor);
 
-      // 外枠のグリッド
-      const grid = new THREE.GridHelper(FIELD_SIZE, 10, 0x38bdf8, 0x334155);
+      const grid = new THREE.GridHelper(FIELD_SIZE, 12, 0x38bdf8, 0x334155);
       grid.position.y = 0.01;
       scene.add(grid);
 
-      // 障害物の描画
+      // 障害物
       obstaclesData.forEach(obs => {
-        const geo = new THREE.BoxGeometry(obs.w, 1.5, obs.d);
+        const geo = new THREE.BoxGeometry(obs.w, 2, obs.d);
         const mat = new THREE.MeshStandardMaterial({ color: 0x475569 });
         const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(obs.x, 0.75, obs.z);
+        mesh.position.set(obs.x, 1, obs.z);
         scene.add(mesh);
-        obstacleMeshes.push(obs);
       });
 
-      // 棒人間の生成（自分：青、相手：赤）
+      // 棒人間作成
       myStickman = createStickman(0x38bdf8);
       enemyStickman = createStickman(0xf43f5e);
       scene.add(myStickman);
@@ -242,32 +266,31 @@
       requestAnimationFrame(gameLoop);
     }
 
-    // 3D棒人間のモデル構築
     function createStickman(colorHex) {
       const group = new THREE.Group();
       const mat = new THREE.MeshStandardMaterial({ color: colorHex });
 
       // 頭
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), mat);
-      head.position.y = 1.4;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), mat);
+      head.position.y = 1.45;
       group.add(head);
 
       // 胴体
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.7), mat);
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.7), mat);
       body.position.y = 0.85;
       group.add(body);
 
-      // 水鉄砲（右手に持たせる）
+      // 水鉄砲
       const gunGroup = new THREE.Group();
-      const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.4), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
+      const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.5), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
       gunGroup.add(gunBody);
-      gunGroup.position.set(0.25, 0.9, 0.2);
+      gunGroup.position.set(0.25, 0.95, -0.2);
       group.add(gunGroup);
 
       return group;
     }
 
-    // --- 3. 操作・ジョイスティック ---
+    // --- 操作・ジョイスティック ---
     function setupJoystick() {
       const zone = document.getElementById('touch-zone');
       const base = document.getElementById('stick-base');
@@ -322,18 +345,18 @@
       window.addEventListener('mouseup', handleEnd);
     }
 
-    // --- 4. ゲームループ & 発射判定 ---
+    // --- 発射・ゲームループ ---
     let lastShot = 0;
     function shoot() {
       const now = Date.now();
-      if (now - lastShot < 300 || myHp <= 0 || isGameOver) return;
+      if (now - lastShot < 300 || myHp <= 0 || !isGamePlaying || isGameOver) return;
       lastShot = now;
 
-      const speed = 0.35;
-      const vx = Math.sin(myPos.angle) * speed;
-      const vz = Math.cos(myPos.angle) * speed;
+      const speed = 0.45;
+      // 人の正面方向（-Z軸ベース）に水を発射
+      const vx = -Math.sin(myPos.angle) * speed;
+      const vz = -Math.cos(myPos.angle) * speed;
 
-      // 自機の弾を発射
       spawnWaterBullet(myPos.x, myPos.z, vx, vz, true);
 
       if (conn && conn.open) {
@@ -345,38 +368,51 @@
       }
     }
 
-    // 水の弾（水滴）を生成
     function spawnWaterBullet(x, z, vx, vz, isMy) {
-      const geo = new THREE.SphereGeometry(0.2, 8, 8);
+      const geo = new THREE.SphereGeometry(0.22, 8, 8);
       const mat = new THREE.MeshStandardMaterial({
         color: isMy ? 0x00f0ff : 0xff0055,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.85
       });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x, 0.9, z);
+      mesh.position.set(x, 1.0, z);
       scene.add(mesh);
 
-      waterBullets.push({ mesh, vx, vz, isMy, life: 60 });
+      waterBullets.push({ mesh, vx, vz, isMy, life: 50 });
     }
 
     function gameLoop() {
-      if (!isGameOver) {
+      if (isGamePlaying && !isGameOver) {
         updateMovement();
         updateWaterBullets();
 
-        // 位置情報の同期（定期送出）
         if (conn && conn.open && Math.random() < 0.2) {
           conn.send({ type: 'state', pos: myPos });
         }
       }
 
-      // 3Dモデルの位置・回転更新
+      // オブジェクト位置反映
       myStickman.position.set(myPos.x, 0, myPos.z);
       myStickman.rotation.y = myPos.angle;
 
       enemyStickman.position.set(enemyPos.x, 0, enemyPos.z);
       enemyStickman.rotation.y = enemyPos.angle;
+
+      // 視点の更新（人目線：自機の背面少し上から前方を見下ろすTPSカメラ）
+      const camOffsetDistance = 4.2;
+      const camHeight = 2.2;
+      camera.position.x = myPos.x + Math.sin(myPos.angle) * camOffsetDistance;
+      camera.position.z = myPos.z + Math.cos(myPos.angle) * camOffsetDistance;
+      camera.position.y = camHeight;
+
+      // 自機の少し前方（目線位置）を注視
+      const lookAtTarget = new THREE.Vector3(
+        myPos.x - Math.sin(myPos.angle) * 3,
+        1.2,
+        myPos.z - Math.cos(myPos.angle) * 3
+      );
+      camera.lookAt(lookAtTarget);
 
       renderer.render(scene, camera);
       requestAnimationFrame(gameLoop);
@@ -386,16 +422,15 @@
       if (myHp <= 0 || !joystickVector.active) return;
 
       const speed = 0.12;
-      const moveX = joystickVector.x * speed;
-      const moveZ = joystickVector.y * speed;
+      const turnSpeed = 0.05;
 
-      let nextX = myPos.x + moveX;
-      let nextZ = myPos.z + moveZ;
+      // X軸ドラッグで旋回、Y軸ドラッグで前後移動
+      myPos.angle -= joystickVector.x * turnSpeed;
 
-      // 角度の計算
-      myPos.angle = Math.atan2(moveX, moveZ);
+      const moveForward = -joystickVector.y * speed;
+      let nextX = myPos.x - Math.sin(myPos.angle) * moveForward;
+      let nextZ = myPos.z - Math.cos(myPos.angle) * moveForward;
 
-      // 移動限界・障害物判定
       const bound = FIELD_SIZE / 2 - 0.5;
       if (Math.abs(nextX) < bound && Math.abs(nextZ) < bound) {
         let collide = false;
@@ -419,7 +454,6 @@
         b.mesh.position.z += b.vz;
         b.life--;
 
-        // 障害物との当たり判定
         let hitObs = false;
         for (let obs of obstaclesData) {
           if (b.mesh.position.x > obs.x - obs.w/2 && b.mesh.position.x < obs.x + obs.w/2 &&
@@ -428,17 +462,15 @@
           }
         }
 
-        // 消滅または画面外判定
         if (b.life <= 0 || hitObs || Math.abs(b.mesh.position.x) > FIELD_SIZE/2 || Math.abs(b.mesh.position.z) > FIELD_SIZE/2) {
           scene.remove(b.mesh);
           waterBullets.splice(i, 1);
           continue;
         }
 
-        // 相手へのヒット判定（自分の弾）
         if (b.isMy) {
           const dist = Math.hypot(b.mesh.position.x - enemyPos.x, b.mesh.position.z - enemyPos.z);
-          if (dist < 0.6) {
+          if (dist < 0.7) {
             enemyHp = Math.max(0, enemyHp - 15);
             document.getElementById('hp-enemy').style.width = enemyHp + '%';
 
@@ -462,9 +494,10 @@
       if (myHp <= 0) endGame(false);
     }
 
-    // --- 5. 勝敗 ＆ 再戦（リトライ）同期システム ---
+    // --- 勝敗 ＆ リトライ ---
     function endGame(isWin) {
       isGameOver = true;
+      isGamePlaying = false;
       const overlay = document.getElementById('result-overlay');
       const text = document.getElementById('result-text');
 
@@ -478,15 +511,12 @@
       }
     }
 
-    // 「もう一度遊ぶ」を押したときの処理
     function requestRetry() {
       myRetryReady = true;
       document.getElementById('retry-btn').disabled = true;
       document.getElementById('retry-btn').classList.add('opacity-50', 'cursor-not-allowed');
 
-      if (conn && conn.open) {
-        conn.send({ type: 'retry_request' });
-      }
+      if (conn && conn.open) conn.send({ type: 'retry_request' });
 
       updateRetryUI();
       checkBothReadyToReset();
@@ -503,17 +533,13 @@
       }
     }
 
-    // 2人ともボタンを押したらリセットして再スタート
     function checkBothReadyToReset() {
       if (myRetryReady && enemyRetryReady) {
-        setTimeout(() => {
-          resetGame();
-        }, 800);
+        setTimeout(() => { resetGame(); }, 800);
       }
     }
 
     function resetGame() {
-      // 変数リセット
       myHp = 100;
       enemyHp = 100;
       document.getElementById('hp-you').style.width = '100%';
@@ -522,20 +548,19 @@
       myPos = { x: -6, z: 6, angle: 0 };
       enemyPos = { x: 6, z: -6, angle: Math.PI };
 
-      // 弾の全消去
       waterBullets.forEach(b => scene.remove(b.mesh));
       waterBullets = [];
 
-      // フラグリセット
       isGameOver = false;
       myRetryReady = false;
       enemyRetryReady = false;
 
-      // UIリセット
       document.getElementById('result-overlay').classList.add('hidden');
       document.getElementById('retry-btn').disabled = false;
       document.getElementById('retry-btn').classList.remove('opacity-50', 'cursor-not-allowed');
       document.getElementById('retry-status-text').innerText = "「もう一度遊ぶ」を押してください";
+
+      startCountdown();
     }
   </script>
 </body>
