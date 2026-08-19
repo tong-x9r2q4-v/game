@@ -25,9 +25,9 @@
     <div class="p-4 bg-slate-700/50 rounded-2xl border border-slate-600 space-y-3">
       <h2 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">部屋を作る（Host）</h2>
       <button onclick="createRoom()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-xl text-sm transition">
-        ルームIDを発行
+        ルームコードを発行
       </button>
-      <div id="room-id-display" class="hidden p-2 bg-slate-900 rounded-lg text-xs font-mono text-emerald-400 border border-emerald-500/30 break-all select-all"></div>
+      <div id="room-id-display" class="hidden p-3 bg-slate-900 rounded-xl text-2xl font-mono font-bold tracking-widest text-emerald-400 border border-emerald-500/30"></div>
     </div>
 
     <div class="text-xs text-slate-500 font-bold">OR</div>
@@ -35,8 +35,8 @@
     <!-- ゲスト -->
     <div class="p-4 bg-slate-700/50 rounded-2xl border border-slate-600 space-y-3">
       <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wider">部屋に入る（Guest）</h2>
-      <input type="text" id="join-room-id" placeholder="相手のルームIDを入力" 
-        class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-xs text-center font-mono text-white focus:outline-none focus:border-amber-400">
+      <input type="number" id="join-room-id" placeholder="4桁のコードを入力" pattern="\d*" maxlength="4"
+        class="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-lg text-center font-mono text-white tracking-widest focus:outline-none focus:border-amber-400">
       <button onclick="joinRoom()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 font-bold rounded-xl text-sm transition">
         対戦に参加
       </button>
@@ -70,7 +70,7 @@
 
       <!-- 勝敗オーバーレイ -->
       <div id="result-overlay" class="hidden absolute inset-0 bg-slate-950/90 rounded-2xl flex flex-col items-center justify-center space-y-3 z-20">
-        <div id="result-text" class="text-4xl font-extrabold tracking-wider"></div>
+        <div id="result-text" class="text-3xl font-extrabold tracking-wider"></div>
         <p class="text-xs text-slate-400">ゲーム終了</p>
         <button onclick="location.reload()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-xs">もう一度遊ぶ</button>
       </div>
@@ -117,26 +117,45 @@
     // ジョイスティック入力用
     let joystickVector = { x: 0, y: 0, active: false };
 
-    // --- P2P接続 ---
+    // --- P2P接続（4桁コード対応） ---
     function createRoom() {
-      peer = new Peer();
+      const shortCode = Math.floor(1000 + Math.random() * 9000).toString();
+      const fullRoomId = 'tank-room-' + shortCode;
+
+      peer = new Peer(fullRoomId);
+      document.getElementById('status-text').innerText = "部屋を作成中...";
+
       peer.on('open', (id) => {
         isHost = true;
-        document.getElementById('room-id-display').innerText = id;
+        document.getElementById('room-id-display').innerText = shortCode;
         document.getElementById('room-id-display').classList.remove('hidden');
-        document.getElementById('status-text').innerText = "相手の接続を待っています...";
+        document.getElementById('status-text').innerText = "相手に「" + shortCode + "」を伝えてください";
       });
+
       peer.on('connection', (c) => { conn = c; setupCommunication(); });
+
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') createRoom();
+      });
     }
 
     function joinRoom() {
-      const id = document.getElementById('join-room-id').value.trim();
-      if(!id) return alert("IDを入力してください");
+      const inputCode = document.getElementById('join-room-id').value.trim();
+      if(!inputCode) return alert("4桁のルームコードを入力してください");
+
+      const fullRoomId = 'tank-room-' + inputCode;
+
       peer = new Peer();
+      document.getElementById('status-text').innerText = "接続中...";
+
       peer.on('open', () => {
         isHost = false;
-        conn = peer.connect(id);
+        conn = peer.connect(fullRoomId);
         setupCommunication();
+      });
+
+      peer.on('error', (err) => {
+        document.getElementById('status-text').innerText = "部屋が見つかりません。コードを確認してください。";
       });
     }
 
@@ -351,7 +370,6 @@
         if (b.isMy) {
           const dist = Math.hypot(b.x - enemyTank.x, b.y - enemyTank.y);
           if (dist < 14) {
-            // 相手にダメージを与える
             enemyHp = Math.max(0, enemyHp - 20);
             document.getElementById('hp-enemy').style.width = enemyHp + '%';
 
@@ -361,7 +379,6 @@
 
             bullets.splice(i, 1);
 
-            // 勝利判定
             if (enemyHp <= 0) {
               endGame(true);
             }
@@ -377,7 +394,6 @@
 
       if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
 
-      // 敗北判定
       if (myHp <= 0) {
         endGame(false);
       }
