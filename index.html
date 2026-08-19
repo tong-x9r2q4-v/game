@@ -2,14 +2,17 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>3D TPS ウォーターバトル【完全】</title>
+  <!-- ↓ 更新されたか確認しやすいようにタイトルを変更しています ↓ -->
+  <title>3D TPS ウォーターバトル【v2】</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
-    body { touch-action: none; overflow: hidden; background: #0f172a; }
+    body { touch-action: none; overflow: hidden; background: #0f172a; margin: 0; padding: 0; }
+    #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+    .ui-layer { position: relative; z-index: 10; pointer-events: none; }
+    .pointer-events-auto { pointer-events: auto; }
     @keyframes secretFlashAnimation { 0% { opacity: 0.8; } 100% { opacity: 0; } }
     .secret-flash { animation: secretFlashAnimation 0.15s ease-out forwards; }
     @keyframes tvScale { 0% { transform: scale(0) rotate(-5deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
@@ -18,69 +21,94 @@
     .nuke-flash { animation: screenNuke 1.5s ease-out forwards; }
   </style>
 </head>
-<body class="text-white font-sans min-h-screen flex flex-col items-center justify-center p-2 select-none">
+<body class="text-white font-sans min-h-screen flex flex-col items-center justify-center select-none">
 
+  <!-- 3D描画エリア -->
+  <div id="canvas-container"></div>
+
+  <!-- 演出用オーバーレイ -->
   <div id="secret-flash-overlay" class="pointer-events-none fixed inset-0 bg-cyan-300 opacity-0 z-50"></div>
   <div id="nuke-overlay" class="pointer-events-none fixed inset-0 bg-white opacity-0 z-50"></div>
 
-  <!-- ロビー -->
-  <div id="lobby-view" class="w-full max-w-sm bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl space-y-6 text-center z-10">
+  <!-- ロビー画面 -->
+  <div id="lobby-view" class="ui-layer pointer-events-auto w-full max-w-sm bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl space-y-6 text-center">
     <h1 class="text-xl font-bold">3D TPS ウォーターバトル</h1>
-    <button onclick="createRoom()" class="w-full py-3 bg-cyan-600 rounded-xl font-bold">ルーム作成</button>
+    <button onclick="createRoom()" class="w-full py-3 bg-cyan-600 rounded-xl font-bold active:scale-95 transition">ルーム作成</button>
     <div id="room-id-display" class="hidden text-2xl font-mono text-emerald-400"></div>
-    <input type="number" id="join-room-id" placeholder="ルームコード" class="w-full p-3 bg-slate-900 rounded-xl text-center">
-    <button onclick="joinRoom()" class="w-full py-3 bg-amber-600 rounded-xl font-bold">参加する</button>
+    <input type="number" id="join-room-id" placeholder="ルームコード (4桁)" class="w-full p-3 bg-slate-900 rounded-xl text-center text-white">
+    <button onclick="joinRoom()" class="w-full py-3 bg-amber-600 rounded-xl font-bold active:scale-95 transition">参加する</button>
     <p id="status-text" class="text-xs text-slate-400">待機中...</p>
   </div>
 
-  <!-- ゲーム画面 -->
-  <div id="game-view" class="hidden flex-col items-center space-y-2 relative w-full max-w-md">
-    <div class="flex w-full px-4 py-2 bg-slate-800/80 rounded-2xl border border-slate-700">
+  <!-- ゲームUI画面 -->
+  <div id="game-view" class="hidden ui-layer w-full h-full flex flex-col justify-between p-4 relative max-w-md w-full">
+    
+    <!-- HPバー -->
+    <div class="flex w-full px-4 py-2 bg-slate-800/80 rounded-2xl border border-slate-700 pointer-events-auto">
       <div class="w-1/2">
         <div class="text-[10px] text-cyan-400">YOU</div>
-        <div class="w-full bg-slate-700 h-2 rounded-full"><div id="hp-you" class="bg-cyan-400 h-full w-full transition-all"></div></div>
+        <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden"><div id="hp-you" class="bg-cyan-400 h-full w-full transition-all"></div></div>
       </div>
       <div class="w-1/2 ml-2">
         <div class="text-[10px] text-rose-400">ENEMY</div>
-        <div class="w-full bg-slate-700 h-2 rounded-full"><div id="hp-enemy" class="bg-rose-400 h-full w-full transition-all"></div></div>
+        <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden"><div id="hp-enemy" class="bg-rose-400 h-full w-full transition-all"></div></div>
       </div>
     </div>
 
-    <div id="view-touch-area" class="relative w-full h-[380px] rounded-2xl overflow-hidden border-2 border-slate-700 bg-slate-950">
-      <div id="canvas-container" class="w-full h-full"></div>
-      <div id="secret-dots" class="absolute top-2 left-2 flex space-x-1"></div>
-      
-      <!-- 演出要素 -->
-      <div id="warning-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 px-4 py-1 rounded-full animate-bounce text-xs font-black z-20">⚠️ 巨大隕石・超接近中 ⚠️</div>
-      <div id="tv-overlay" class="hidden absolute inset-x-8 top-12 bg-slate-900 border-4 border-slate-700 rounded-3xl p-3 z-30 tv-popup text-center">
-        <div class="text-xs text-amber-400">📺 臨時ニュース速報</div>
-        <div id="tv-timer" class="text-4xl font-black text-red-500">5</div>
-      </div>
-      <div id="result-overlay" class="hidden absolute inset-0 bg-slate-950/90 rounded-2xl flex flex-col items-center justify-center z-40">
-        <div id="result-text" class="text-3xl font-black mb-4"></div>
-        <button id="retry-btn" onclick="requestRetry()" class="px-8 py-3 bg-cyan-600 rounded-xl font-bold">もう一度遊ぶ</button>
-      </div>
+    <!-- 演出UI要素 -->
+    <div id="warning-banner" class="hidden absolute top-20 left-1/2 -translate-x-1/2 bg-red-600 px-6 py-2 rounded-full animate-bounce text-sm font-black z-20">⚠️ 巨大隕石・超接近中 ⚠️</div>
+    <div id="tv-overlay" class="hidden absolute inset-x-8 top-1/3 bg-slate-900 border-4 border-slate-700 rounded-3xl p-4 z-30 tv-popup text-center">
+      <div class="text-sm text-amber-400 mb-2">📺 臨時ニュース速報</div>
+      <div id="tv-timer" class="text-5xl font-black text-red-500">5</div>
     </div>
-    <button id="shoot-btn" class="w-full py-6 bg-cyan-600 rounded-2xl font-bold active:scale-95 transition">SHOOT 💦</button>
+
+    <div id="result-overlay" class="hidden absolute inset-0 bg-slate-950/90 rounded-2xl flex-col items-center justify-center z-40 pointer-events-auto">
+      <div id="result-text" class="text-3xl font-black mb-6 mt-20"></div>
+      <button onclick="location.reload()" class="px-8 py-3 bg-cyan-600 rounded-xl font-bold active:scale-95 transition">タイトルに戻る</button>
+    </div>
+
+    <!-- 操作系 -->
+    <div class="pointer-events-auto flex flex-col space-y-2">
+      <div id="secret-dots" class="flex space-x-1 h-2 mb-2"></div>
+      <button id="shoot-btn" class="w-full py-6 bg-cyan-600 rounded-2xl font-bold active:scale-95 transition shadow-lg text-xl" ontouchstart="handleShootTouch(event)" onmousedown="handleShootMouse(event)">SHOOT 💦</button>
+    </div>
   </div>
 
   <script>
-    let peer, conn, isHost, myHp = 100, enemyHp = 100, isGameOver = false, secretModeActive = false;
-    let myPos = { x: -6, z: 6, angle: 0 }, enemyPos = { x: 6, z: -6, angle: Math.PI };
-    let waterBullets = [], clones = [], meteors = [], secretTimers = [];
+    // --- 通信＆ゲーム状態 ---
+    let peer, conn;
+    let isGameOver = false, secretModeActive = false;
+    let myHp = 100, enemyHp = 100;
+    
+    // --- Three.js 変数 ---
+    let scene, camera, renderer, myMesh, enemyMesh;
+    let waterBullets = [], meteors = [];
+    let myPos = { x: 0, z: 4, angle: 0 };
+    let enemyPos = { x: 0, z: -4, angle: Math.PI };
+    
+    // --- SOS 隠しコマンド変数 ---
     let tapPattern = [], lastTapTime = 0;
     const SOS_PATTERN = ['S','S','S','L','L','L','S','S','S'];
+
+    // --- 通信処理 ---
+    function updateStatus(msg) { document.getElementById('status-text').innerText = msg; }
 
     function createRoom() {
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       peer = new Peer('water-battle-' + code);
-      peer.on('open', () => { document.getElementById('room-id-display').innerText = code; document.getElementById('room-id-display').classList.remove('hidden'); });
+      peer.on('open', () => { 
+        document.getElementById('room-id-display').innerText = `ルーム: ${code}`;
+        document.getElementById('room-id-display').classList.remove('hidden');
+        updateStatus("相手の参加を待っています...");
+      });
       peer.on('connection', (c) => { conn = c; setupCommunication(); });
     }
 
     function joinRoom() {
       const code = document.getElementById('join-room-id').value;
+      if (!code) return;
       peer = new Peer();
+      updateStatus("接続中...");
       peer.on('open', () => { conn = peer.connect('water-battle-' + code); setupCommunication(); });
     }
 
@@ -89,51 +117,169 @@
         document.getElementById('lobby-view').classList.add('hidden');
         document.getElementById('game-view').classList.remove('hidden');
         init3DGame();
+        
+        // メインループ開始
+        setInterval(sendMyState, 50);
+        requestAnimationFrame(gameLoop);
       });
+
       conn.on('data', (data) => {
         if (data.type === 'state') {
-          enemyPos.x = -data.pos.x; enemyPos.z = -data.pos.z; enemyPos.angle = data.pos.angle + Math.PI;
-          if (data.newWater) spawnWaterBullet(-data.newWater.x, -data.newWater.z, -data.newWater.vx, -data.newWater.vz, false);
-          // 完全同期：演出トリガー
-          if (data.triggerSecret && !secretModeActive) triggerSecretSequence();
+          // 相手の位置と向きを反転して適用 (P2P対戦の鏡合わせ)
+          enemyMesh.position.x = -data.pos.x;
+          enemyMesh.position.z = -data.pos.z;
+          enemyMesh.rotation.y = data.pos.angle + Math.PI;
+          
+          if (data.triggerSecret && !secretModeActive) {
+            triggerSecretSequence(); // ★相手からのSOS信号を受信して同期発動！
+          }
         }
       });
     }
 
+    function sendMyState() {
+      if (conn && conn.open && !isGameOver) {
+        conn.send({ type: 'state', pos: myPos, triggerSecret: false });
+      }
+    }
+
+    // --- 隠し演出ロジック ---
+    function handleShootMouse(e) { e.preventDefault(); processTap(); }
+    function handleShootTouch(e) { e.preventDefault(); processTap(); }
+
+    function processTap() {
+      if (isGameOver) return;
+      
+      const now = Date.now();
+      if (lastTapTime > 0 && now - lastTapTime < 1000) {
+        const type = (now - lastTapTime < 300) ? 'S' : 'L';
+        tapPattern.push(type);
+        if (tapPattern.length > SOS_PATTERN.length) tapPattern.shift();
+      } else {
+        tapPattern = ['S'];
+      }
+      lastTapTime = now;
+      updateSecretDots();
+
+      // SOS完成判定
+      if (!secretModeActive && tapPattern.join('') === SOS_PATTERN.join('')) {
+        // ★自分が発動した場合、相手にフラグを送信
+        if (conn && conn.open) conn.send({ type: 'state', pos: myPos, triggerSecret: true });
+        triggerSecretSequence();
+      }
+    }
+
+    function updateSecretDots() {
+      const container = document.getElementById('secret-dots');
+      container.innerHTML = '';
+      tapPattern.forEach(t => {
+        const dot = document.createElement('div');
+        dot.className = `h-2 w-2 rounded-full ${t === 'S' ? 'bg-cyan-400' : 'bg-rose-400 w-4'}`;
+        container.appendChild(dot);
+      });
+    }
+
+    // ★ 同期される完全な隠し演出
     function triggerSecretSequence() {
       secretModeActive = true;
-      // 5体分身
-      for (let i = 0; i < 5; i++) {
-        const clone = createStickman(0x38bdf8);
-        scene.add(clone); clones.push(clone);
+      document.getElementById('secret-flash-overlay').classList.add('secret-flash');
+      
+      // 分身の術 (赤いダミーを出現させる)
+      for(let i=0; i<3; i++) {
+        const m = createPlayerMesh(0xaaaaaa);
+        m.position.set((Math.random()-0.5)*10, 1, (Math.random()-0.5)*10);
+        scene.add(m);
       }
-      // 演出開始
-      secretTimers.push(setTimeout(() => document.getElementById('warning-banner').classList.remove('hidden'), 1000));
-      secretTimers.push(setTimeout(() => {
+
+      // 時間差でUI表示
+      setTimeout(() => document.getElementById('warning-banner').classList.remove('hidden'), 1000);
+      
+      setTimeout(() => {
         document.getElementById('tv-overlay').classList.remove('hidden');
         let t = 5;
         const interval = setInterval(() => {
-          t--; document.getElementById('tv-timer').innerText = t;
-          if(t <= 0) { clearInterval(interval); document.getElementById('nuke-overlay').classList.add('nuke-flash'); setTimeout(()=>endGame(true), 700); }
+          t--;
+          document.getElementById('tv-timer').innerText = t;
+          if(t <= 0) {
+            clearInterval(interval);
+            document.getElementById('nuke-overlay').classList.add('nuke-flash');
+            setTimeout(() => endGame(true), 700); // 両者引き分け（世界崩壊）
+          }
         }, 1000);
-      }, 3000));
+      }, 3000);
     }
 
-    function executeShootAction() {
-      // 隠し演出発動ロジック
-      if (!secretModeActive && tapPattern.length === SOS_PATTERN.length) {
-        triggerSecretSequence();
-        if (conn?.open) conn.send({ type: 'state', pos: myPos, triggerSecret: true });
+    function endGame(isWorldDestroyed) {
+      isGameOver = true;
+      document.getElementById('result-overlay').style.display = 'flex';
+      document.getElementById('result-text').innerText = isWorldDestroyed ? "WORLD DESTROYED" : "GAME OVER";
+    }
+
+    // --- Three.js 描画 ---
+    function init3DGame() {
+      const container = document.getElementById('canvas-container');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f172a);
+
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 5, 10);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      container.appendChild(renderer.domElement);
+
+      const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+      scene.add(light);
+
+      // 地面
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+      floor.rotation.x = -Math.PI / 2;
+      scene.add(floor);
+
+      // プレイヤーと敵の作成
+      myMesh = createPlayerMesh(0x38bdf8); // Cyan
+      scene.add(myMesh);
+      
+      enemyMesh = createPlayerMesh(0xfb7185); // Rose
+      scene.add(enemyMesh);
+    }
+
+    function createPlayerMesh(colorHex) {
+      const geo = new THREE.CylinderGeometry(0.5, 0.5, 2, 16);
+      const mat = new THREE.MeshStandardMaterial({ color: colorHex });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.y = 1;
+      return mesh;
+    }
+
+    function gameLoop() {
+      if (!isGameOver) {
+        // 隕石の演出(secretModeActiveがtrueになったら降らせる)
+        if (secretModeActive && Math.random() < 0.1) {
+          const mGeo = new THREE.SphereGeometry(Math.random() * 2 + 1);
+          const mMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+          const m = new THREE.Mesh(mGeo, mMat);
+          m.position.set((Math.random()-0.5)*20, 20, (Math.random()-0.5)*20);
+          scene.add(m);
+          meteors.push(m);
+        }
+
+        meteors.forEach(m => m.position.y -= 0.5);
       }
-      // 弾の発射... (既存処理)
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(gameLoop);
     }
 
-    // 3Dレンダリング等の初期化は既存のものを流用...
-    function init3DGame() { /* Three.jsの初期化 */ }
-    function endGame(isWin) { isGameOver = true; document.getElementById('result-overlay').classList.remove('hidden'); document.getElementById('result-text').innerText = isWin ? "WORLD DESTROYED (WIN)" : "LOSE"; }
-    
-    // (タッチ操作や移動処理は既存のものをそのまま利用)
-    // 最後にカメラやプレイヤーの更新ループを回す
+    // 画面リサイズ対応
+    window.addEventListener('resize', () => {
+      if(camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    });
   </script>
 </body>
 </html>
