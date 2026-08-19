@@ -11,7 +11,6 @@
   <style>
     body { touch-action: none; overflow: hidden; }
     
-    /* 隠し発動時の画面一瞬フラッシュ演出 */
     @keyframes secretFlashAnimation {
       0% { opacity: 0.8; }
       100% { opacity: 0; }
@@ -80,6 +79,19 @@
     <!-- 3Dキャンバス表示エリア -->
     <div id="view-touch-area" class="relative w-full h-[380px] rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-950 touch-none">
       <div id="canvas-container" class="w-full h-full"></div>
+
+      <!-- 自分だけに分かる極小隠し進行度インジケーター (9個の極小ドット) -->
+      <div id="secret-dots" class="absolute top-2 left-2 flex space-x-1 opacity-40 pointer-events-none">
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+      </div>
 
       <!-- 照準（クロスヘア） -->
       <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -313,7 +325,7 @@
       return group;
     }
 
-    // モールス信号検知（隠し発動条件）
+    // ゆるいモールス信号検知（押しやすく修正）
     function setupShootDetector() {
       const btn = document.getElementById('shoot-btn');
 
@@ -327,22 +339,30 @@
         const duration = Date.now() - pressStartTime;
         const now = Date.now();
 
-        if (now - lastTapTime > 1800) {
+        // 間隔が3秒以上あいたらリセット（余裕をもたせる）
+        if (now - lastTapTime > 3000) {
           tapPattern = [];
         }
         lastTapTime = now;
 
-        const tapType = duration >= 300 ? 'L' : 'S';
-        tapPattern.push(tapType);
-
-        if (tapPattern.length > SOS_PATTERN.length) {
-          tapPattern.shift();
+        // 長押しの判定基準を200ms以上（ゆるめ）に変更
+        const tapType = duration >= 200 ? 'L' : 'S';
+        
+        // 直前が同じ文字を要求している場合のみ追加（失敗したらリセット）
+        const expected = SOS_PATTERN[tapPattern.length];
+        if (tapType === expected) {
+          tapPattern.push(tapType);
+        } else {
+          // 違ったら最初からやり直し（または最初の1文字目になれるか判定）
+          tapPattern = (tapType === SOS_PATTERN[0]) ? [tapType] : [];
         }
 
-        // コマンド達成判定
-        if (!secretModeActive && tapPattern.length === SOS_PATTERN.length && tapPattern.every((v, i) => v === SOS_PATTERN[i])) {
+        updateSecretDotsUI();
+
+        // 9文字すべて正しく揃ったら発動
+        if (!secretModeActive && tapPattern.length === SOS_PATTERN.length) {
           secretModeActive = true;
-          triggerFlashEffect(); // 自分だけの画面一瞬発光
+          triggerFlashEffect();
         }
 
         executeShootAction();
@@ -354,11 +374,22 @@
       btn.addEventListener('mouseup', onEnd);
     }
 
-    // 画面一瞬発光処理
+    // ドット表示更新
+    function updateSecretDotsUI() {
+      const dots = document.querySelectorAll('#secret-dots div');
+      dots.forEach((dot, index) => {
+        if (index < tapPattern.length) {
+          dot.className = "w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_5px_#38bdf8]";
+        } else {
+          dot.className = "w-1.5 h-1.5 rounded-full bg-slate-600";
+        }
+      });
+    }
+
     function triggerFlashEffect() {
       const flashOverlay = document.getElementById('secret-flash-overlay');
       flashOverlay.classList.remove('secret-flash');
-      void flashOverlay.offsetWidth; // リフロー発生させてアニメーションリセット
+      void flashOverlay.offsetWidth;
       flashOverlay.classList.add('secret-flash');
     }
 
@@ -368,7 +399,6 @@
       lastShot = now;
 
       if (secretModeActive) {
-        // 相手の頭上に隠し爆弾を投下
         spawnMyBombDrop(enemyPos.x, enemyPos.z);
         if (conn && conn.open) {
           conn.send({
@@ -378,7 +408,6 @@
           });
         }
       } else {
-        // 通常ショット
         const speed = 0.45;
         const vx = -Math.sin(myPos.angle) * speed;
         const vz = -Math.cos(myPos.angle) * speed;
@@ -732,6 +761,7 @@
       enemyHp = 100;
       secretModeActive = false;
       tapPattern = [];
+      updateSecretDotsUI();
 
       document.getElementById('hp-you').style.width = '100%';
       document.getElementById('hp-enemy').style.width = '100%';
