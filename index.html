@@ -119,7 +119,7 @@
       </div>
 
       <!-- 警告インジケーター -->
-      <div id="warning-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/90 text-white font-black text-xs px-4 py-1 rounded-full animate-bounce border border-red-300 shadow-lg">
+      <div id="warning-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/90 text-white font-black text-xs px-4 py-1 rounded-full animate-bounce border border-red-300 shadow-lg z-20">
         ⚠️ 巨大隕石・超接近中 ⚠️
       </div>
 
@@ -132,7 +132,7 @@
           </div>
           <div class="text-xs font-bold text-amber-400">📺 臨時ニュース速報</div>
           <div class="text-2xl animate-pulse">📺💥☄️</div>
-          <p class="text-[11px] font-bold text-slate-200">「未確認の巨大隕石群が落札中！間もなく衝撃波が到達します！」</p>
+          <p class="text-[11px] font-bold text-slate-200">「未確認の巨大隕石群が落下中！間もなく衝撃波が到達します！」</p>
           <div id="tv-timer" class="text-2xl font-black text-red-500 font-mono">5</div>
         </div>
       </div>
@@ -143,8 +143,8 @@
       </div>
 
       <!-- 勝敗・再戦待機オーバレイ -->
-      <div id="result-overlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center space-y-4 z-20">
-        <div id="result-text" class="text-3xl font-extrabold tracking-wider"></div>
+      <div id="result-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center space-y-4 z-40">
+        <div id="result-text" class="text-3xl font-black text-center px-4 tracking-wider"></div>
         <p id="retry-status-text" class="text-xs text-slate-300">「もう一度遊ぶ」を押してください</p>
         <button id="retry-btn" onclick="requestRetry()" class="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 active:scale-95 transition rounded-xl font-bold text-sm shadow-lg">
           もう一度遊ぶ 🔄
@@ -181,6 +181,9 @@
     let lastTapTime = 0;
     let pressStartTime = 0;
     const SOS_PATTERN = ['S','S','S','L','L','L','S','S','S'];
+
+    // タイマー保持用
+    let secretTimers = [];
 
     // プレイヤー状態
     let myHp = 100, enemyHp = 100;
@@ -359,7 +362,6 @@
       return group;
     }
 
-    // ゆるいモールス信号検知
     function setupShootDetector() {
       const btn = document.getElementById('shoot-btn');
 
@@ -418,7 +420,6 @@
       flashOverlay.classList.add('secret-flash');
     }
 
-    // --- 隠しシーケンス展開 ---
     function startSecretSequence() {
       // 5体に増殖
       for (let i = 0; i < 5; i++) {
@@ -429,14 +430,16 @@
         clones.push(clone);
       }
 
-      // 10秒後：画面切り替え（警報 & 隕石スタート）
-      setTimeout(() => {
+      // 10秒後：警報＆隕石スタート
+      secretTimers.push(setTimeout(() => {
+        if (isGameOver) return;
         document.getElementById('warning-banner').classList.remove('hidden');
         spawnMeteors();
-      }, 10000);
+      }, 10000));
 
-      // 10秒後+少ししてからTV放映（5秒カウントダウン）
-      setTimeout(() => {
+      // 12秒後：TV放映＆5秒カウントダウン
+      secretTimers.push(setTimeout(() => {
+        if (isGameOver) return;
         const tv = document.getElementById('tv-overlay');
         tv.classList.remove('hidden');
         let tvCount = 5;
@@ -444,19 +447,19 @@
 
         const interval = setInterval(() => {
           tvCount--;
-          if (tvCount >= 0) tvTimerElem.innerText = tvCount;
+          if (tvCount >= 0 && tvTimerElem) tvTimerElem.innerText = tvCount;
           if (tvCount <= 0) {
             clearInterval(interval);
-            // 爆発演出へ
             triggerBigExplosion();
           }
         }, 1000);
-      }, 12000);
+        secretTimers.push(interval);
+      }, 12000));
     }
 
     function spawnMeteors() {
       for (let i = 0; i < 15; i++) {
-        setTimeout(() => {
+        secretTimers.push(setTimeout(() => {
           if (isGameOver) return;
           const geo = new THREE.SphereGeometry(1.2 + Math.random(), 16, 16);
           const mat = new THREE.MeshStandardMaterial({ color: 0xff4400, roughness: 0.1 });
@@ -465,7 +468,7 @@
           mesh.position.set((Math.random() - 0.5) * FIELD_SIZE, 20 + Math.random() * 10, (Math.random() - 0.5) * FIELD_SIZE);
           scene.add(mesh);
           meteors.push(mesh);
-        }, i * 300);
+        }, i * 300));
       }
     }
 
@@ -641,7 +644,6 @@
         updateWaterBullets();
         updateMeteors();
 
-        // 隠しモード中は連射・HP減少ゼロ
         if (secretModeActive) {
           myHp = 100;
           document.getElementById('hp-you').style.width = '100%';
@@ -769,15 +771,21 @@
     }
 
     function endGame(isWin) {
+      if (isGameOver) return;
       isGameOver = true;
       isGamePlaying = false;
+
+      // 進行中の隠しタイマー類を全消去
+      secretTimers.forEach(t => clearTimeout(t));
+      secretTimers = [];
+
       const overlay = document.getElementById('result-overlay');
       const text = document.getElementById('result-text');
 
       overlay.classList.remove('hidden');
       if (isWin) {
-        text.innerText = secretModeActive ? "WORLD DESTROYED ☄️ (WIN)" : "YOU WIN! 💦";
-        text.className = "text-2xl font-extrabold text-cyan-400 tracking-wider";
+        text.innerText = secretModeActive ? "WORLD DESTROYED ☄️\n(YOU WIN!)" : "YOU WIN! 💦";
+        text.className = "text-2xl font-extrabold text-cyan-400 tracking-wider whitespace-pre-line";
       } else {
         text.innerText = "びしょ濡れ... LOSE ☔";
         text.className = "text-2xl font-extrabold text-rose-400 tracking-wider";
