@@ -7,7 +7,6 @@
   <title>3D TPS ウォーターバトル P2P</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <!-- 3D描画用 Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     body { touch-action: none; overflow: hidden; }
@@ -18,9 +17,9 @@
   <!-- 1. ロビー画面 -->
   <div id="lobby-view" class="w-full max-w-sm bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl space-y-6 text-center z-10">
     <div>
-      <div class="text-4xl mb-2">🔫</div>
+      <div class="text-4xl mb-2">💦</div>
       <h1 class="text-xl font-bold text-slate-100">3D TPS ウォーターバトル</h1>
-      <p class="text-xs text-slate-400 mt-1">人目線（TPS視点）で挑む水鉄砲バトル！</p>
+      <p class="text-xs text-slate-400 mt-1">左手で移動 / 右手スワイプで視点変更！</p>
     </div>
 
     <!-- ホスト -->
@@ -67,8 +66,13 @@
     </div>
 
     <!-- 3Dキャンバス表示エリア -->
-    <div class="relative w-full h-[380px] rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-950">
+    <div id="view-touch-area" class="relative w-full h-[380px] rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-950 touch-none">
       <div id="canvas-container" class="w-full h-full"></div>
+
+      <!-- 照準（クロスヘア） -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div class="w-3 h-3 rounded-full border-2 border-cyan-400/80 bg-cyan-400/20"></div>
+      </div>
 
       <!-- カウントダウン表示 -->
       <div id="countdown-overlay" class="hidden absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] rounded-2xl flex items-center justify-center z-10">
@@ -85,18 +89,18 @@
       </div>
     </div>
 
-    <!-- 操作エリア（ジョイスティック ＋ FIRE） -->
+    <!-- 操作エリア（左：移動ジョイスティック / 右：発射ボタン） -->
     <div class="w-full h-32 bg-slate-800/60 backdrop-blur rounded-2xl border border-slate-700 relative overflow-hidden flex items-center justify-between px-6">
-      <!-- ジョイスティック（左側） -->
+      <!-- 移動ジョイスティック（左側） -->
       <div id="touch-zone" class="w-36 h-full flex items-center justify-center relative touch-none">
-        <div class="text-[10px] text-slate-500 pointer-events-none">移動・旋回</div>
+        <div class="text-[10px] text-slate-500 pointer-events-none">移動（前後左右）</div>
         <div id="stick-base" class="hidden absolute w-16 h-16 bg-slate-700/60 rounded-full border border-slate-500/50 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
           <div id="stick-knob" class="absolute w-8 h-8 bg-cyan-500/80 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
         </div>
       </div>
 
       <!-- 水鉄砲ボタン（右側） -->
-      <button onclick="shoot()" class="w-24 h-24 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 font-bold rounded-2xl text-xs shadow-lg flex flex-col items-center justify-center active:scale-95 transition-transform">
+      <button onclick="shoot()" class="w-24 h-24 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 font-bold rounded-2xl text-xs shadow-lg flex flex-col items-center justify-center active:scale-95 transition-transform z-10">
         <span class="text-xl mb-1">💦</span>
         <span>SHOOT</span>
       </button>
@@ -107,14 +111,18 @@
     let peer = null, conn = null, isHost = false;
     const FIELD_SIZE = 24;
     let isGameOver = false;
-    let isGamePlaying = false; // カウントダウン中は操作不可
+    let isGamePlaying = false;
     let myRetryReady = false, enemyRetryReady = false;
 
-    // HP設定 (100 -> 0)
+    // プレイヤー状態
     let myHp = 100, enemyHp = 100;
     let myPos = { x: -6, z: 6, angle: 0 };
     let enemyPos = { x: 6, z: -6, angle: Math.PI };
     let waterBullets = [];
+
+    // カメラ視点管理
+    let cameraYaw = 0;
+    let cameraPitch = 0.25;
 
     // 障害物データ
     const obstaclesData = [
@@ -191,7 +199,6 @@
       });
     }
 
-    // --- カウントダウン処理 ---
     function startCountdown() {
       isGamePlaying = false;
       const overlay = document.getElementById('countdown-overlay');
@@ -217,7 +224,6 @@
       }, 900);
     }
 
-    // --- 3D描画・人目線（TPS視点）モデル構築 ---
     function init3DGame() {
       const container = document.getElementById('canvas-container');
       scene = new THREE.Scene();
@@ -229,14 +235,12 @@
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
-      // ライト
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
       scene.add(ambientLight);
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
       dirLight.position.set(10, 20, 10);
       scene.add(dirLight);
 
-      // 床
       const floorGeo = new THREE.PlaneGeometry(FIELD_SIZE, FIELD_SIZE);
       const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
       const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -247,7 +251,6 @@
       grid.position.y = 0.01;
       scene.add(grid);
 
-      // 障害物
       obstaclesData.forEach(obs => {
         const geo = new THREE.BoxGeometry(obs.w, 2, obs.d);
         const mat = new THREE.MeshStandardMaterial({ color: 0x475569 });
@@ -256,13 +259,12 @@
         scene.add(mesh);
       });
 
-      // 棒人間作成
       myStickman = createStickman(0x38bdf8);
       enemyStickman = createStickman(0xf43f5e);
       scene.add(myStickman);
       scene.add(enemyStickman);
 
-      setupJoystick();
+      setupControls();
       requestAnimationFrame(gameLoop);
     }
 
@@ -270,17 +272,14 @@
       const group = new THREE.Group();
       const mat = new THREE.MeshStandardMaterial({ color: colorHex });
 
-      // 頭
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), mat);
       head.position.y = 1.45;
       group.add(head);
 
-      // 胴体
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.7), mat);
       body.position.y = 0.85;
       group.add(body);
 
-      // 水鉄砲
       const gunGroup = new THREE.Group();
       const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.5), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
       gunGroup.add(gunBody);
@@ -290,16 +289,17 @@
       return group;
     }
 
-    // --- 操作・ジョイスティック ---
-    function setupJoystick() {
+    function setupControls() {
+      // 1. ジョイスティック操作
       const zone = document.getElementById('touch-zone');
       const base = document.getElementById('stick-base');
       const knob = document.getElementById('stick-knob');
-      let touchId = null, startX = 0, startY = 0;
+      let joyTouchId = null, startX = 0, startY = 0;
 
-      const handleStart = (e) => {
+      const handleJoyStart = (e) => {
+        e.preventDefault();
         const touch = e.touches ? e.touches[0] : e;
-        touchId = touch.identifier ?? 'mouse';
+        joyTouchId = touch.identifier ?? 'mouse';
         const rect = zone.getBoundingClientRect();
         startX = touch.clientX - rect.left;
         startY = touch.clientY - rect.top;
@@ -310,9 +310,9 @@
         joystickVector.active = true;
       };
 
-      const handleMove = (e) => {
+      const handleJoyMove = (e) => {
         if (!joystickVector.active) return;
-        let touch = e.touches ? Array.from(e.touches).find(t => t.identifier === touchId) : e;
+        let touch = e.touches ? Array.from(e.touches).find(t => t.identifier === joyTouchId) : e;
         if (!touch) return;
 
         const rect = zone.getBoundingClientRect();
@@ -331,21 +331,81 @@
         joystickVector.y = dy / maxRadius;
       };
 
-      const handleEnd = () => {
+      const handleJoyEnd = () => {
         joystickVector.active = false;
         joystickVector.x = 0; joystickVector.y = 0;
         base.classList.add('hidden');
       };
 
-      zone.addEventListener('touchstart', handleStart);
-      zone.addEventListener('touchmove', handleMove);
-      zone.addEventListener('touchend', handleEnd);
-      zone.addEventListener('mousedown', handleStart);
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
+      zone.addEventListener('touchstart', handleJoyStart, { passive: false });
+      zone.addEventListener('touchmove', handleJoyMove, { passive: false });
+      zone.addEventListener('touchend', handleJoyEnd);
+      zone.addEventListener('mousedown', handleJoyStart);
+
+      // 2. 視点ドラッグ操作
+      const touchArea = document.getElementById('view-touch-area');
+      let lookTouchId = null;
+      let lastTouchX = 0, lastTouchY = 0;
+
+      const handleLookStart = (e) => {
+        if (e.touches) {
+          for (let i = 0; i < e.touches.length; i++) {
+            let t = e.touches[i];
+            if (t.identifier !== joyTouchId && lookTouchId === null) {
+              lookTouchId = t.identifier;
+              lastTouchX = t.clientX;
+              lastTouchY = t.clientY;
+              break;
+            }
+          }
+        } else {
+          lookTouchId = 'mouse';
+          lastTouchX = e.clientX;
+          lastTouchY = e.clientY;
+        }
+      };
+
+      const handleLookMove = (e) => {
+        if (lookTouchId === null) return;
+        let t = e.touches ? Array.from(e.touches).find(touch => touch.identifier === lookTouchId) : e;
+        if (!t) return;
+
+        let deltaX = t.clientX - lastTouchX;
+        let deltaY = t.clientY - lastTouchY;
+        lastTouchX = t.clientX;
+        lastTouchY = t.clientY;
+
+        const sensitivity = 0.008;
+        cameraYaw += deltaX * sensitivity;
+        cameraPitch += deltaY * sensitivity;
+
+        cameraPitch = Math.max(-0.2, Math.min(0.8, cameraPitch));
+      };
+
+      const handleLookEnd = (e) => {
+        if (e.touches) {
+          let activeTouches = Array.from(e.touches).map(t => t.identifier);
+          if (!activeTouches.includes(lookTouchId)) lookTouchId = null;
+        } else {
+          lookTouchId = null;
+        }
+      };
+
+      touchArea.addEventListener('touchstart', handleLookStart, { passive: false });
+      touchArea.addEventListener('touchmove', handleLookMove, { passive: false });
+      touchArea.addEventListener('touchend', handleLookEnd);
+      touchArea.addEventListener('mousedown', handleLookStart);
+
+      window.addEventListener('mousemove', (e) => {
+        handleJoyMove(e);
+        handleLookMove(e);
+      });
+      window.addEventListener('mouseup', () => {
+        handleJoyEnd();
+        handleLookEnd({});
+      });
     }
 
-    // --- 発射・ゲームループ ---
     let lastShot = 0;
     function shoot() {
       const now = Date.now();
@@ -353,7 +413,6 @@
       lastShot = now;
 
       const speed = 0.45;
-      // 人の正面方向（-Z軸ベース）に水を発射
       const vx = -Math.sin(myPos.angle) * speed;
       const vz = -Math.cos(myPos.angle) * speed;
 
@@ -387,32 +446,33 @@
         updateMovement();
         updateWaterBullets();
 
-        if (conn && conn.open && Math.random() < 0.2) {
+        // 相手に最新の位置情報を送信
+        if (conn && conn.open) {
           conn.send({ type: 'state', pos: myPos });
         }
       }
 
-      // オブジェクト位置反映
+      // 自分と相手の3Dモデルの位置・向き更新
+      myPos.angle = cameraYaw;
       myStickman.position.set(myPos.x, 0, myPos.z);
       myStickman.rotation.y = myPos.angle;
 
       enemyStickman.position.set(enemyPos.x, 0, enemyPos.z);
       enemyStickman.rotation.y = enemyPos.angle;
 
-      // 視点の更新（人目線：自機の背面少し上から前方を見下ろすTPSカメラ）
-      const camOffsetDistance = 4.2;
-      const camHeight = 2.2;
-      camera.position.x = myPos.x + Math.sin(myPos.angle) * camOffsetDistance;
-      camera.position.z = myPos.z + Math.cos(myPos.angle) * camOffsetDistance;
+      // カメラの位置をプレイヤーの位置（myPos）に追従させる
+      const camDist = 4.0;
+      const camHeight = 1.2 + Math.sin(cameraPitch) * 3.0;
+      const horizontalDist = Math.cos(cameraPitch) * camDist;
+
+      camera.position.x = myPos.x + Math.sin(cameraYaw) * horizontalDist;
+      camera.position.z = myPos.z + Math.cos(cameraYaw) * horizontalDist;
       camera.position.y = camHeight;
 
-      // 自機の少し前方（目線位置）を注視
-      const lookAtTarget = new THREE.Vector3(
-        myPos.x - Math.sin(myPos.angle) * 3,
-        1.2,
-        myPos.z - Math.cos(myPos.angle) * 3
-      );
-      camera.lookAt(lookAtTarget);
+      // カメラの視線をプレイヤー前方へ向ける
+      const targetX = myPos.x - Math.sin(cameraYaw) * 10;
+      const targetZ = myPos.z - Math.cos(cameraYaw) * 10;
+      camera.lookAt(targetX, 1.2, targetZ);
 
       renderer.render(scene, camera);
       requestAnimationFrame(gameLoop);
@@ -422,14 +482,17 @@
       if (myHp <= 0 || !joystickVector.active) return;
 
       const speed = 0.12;
-      const turnSpeed = 0.05;
+      const inputForward = -joystickVector.y;
+      const inputStrafe = joystickVector.x;
 
-      // X軸ドラッグで旋回、Y軸ドラッグで前後移動
-      myPos.angle -= joystickVector.x * turnSpeed;
+      const sin = Math.sin(cameraYaw);
+      const cos = Math.cos(cameraYaw);
 
-      const moveForward = -joystickVector.y * speed;
-      let nextX = myPos.x - Math.sin(myPos.angle) * moveForward;
-      let nextZ = myPos.z - Math.cos(myPos.angle) * moveForward;
+      let moveX = (-sin * inputForward + cos * inputStrafe) * speed;
+      let moveZ = (-cos * inputForward - sin * inputStrafe) * speed;
+
+      let nextX = myPos.x + moveX;
+      let nextZ = myPos.z + moveZ;
 
       const bound = FIELD_SIZE / 2 - 0.5;
       if (Math.abs(nextX) < bound && Math.abs(nextZ) < bound) {
@@ -494,7 +557,6 @@
       if (myHp <= 0) endGame(false);
     }
 
-    // --- 勝敗 ＆ リトライ ---
     function endGame(isWin) {
       isGameOver = true;
       isGamePlaying = false;
@@ -547,6 +609,8 @@
 
       myPos = { x: -6, z: 6, angle: 0 };
       enemyPos = { x: 6, z: -6, angle: Math.PI };
+      cameraYaw = 0;
+      cameraPitch = 0.25;
 
       waterBullets.forEach(b => scene.remove(b.mesh));
       waterBullets = [];
