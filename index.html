@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
-    body { touch-action: manipulation; }
+    body { touch-action: none; }
   </style>
 </head>
 <body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col items-center justify-center p-2 select-none">
@@ -46,42 +46,52 @@
   </div>
 
   <!-- 2. ゲーム画面 -->
-  <div id="game-view" class="hidden flex-col items-center space-y-2">
+  <div id="game-view" class="hidden flex-col items-center space-y-2 relative">
     <!-- HPバー -->
     <div class="flex items-center justify-between w-[320px] px-4 py-2 bg-slate-800 rounded-2xl border border-slate-700">
       <div class="text-left w-28">
         <div class="text-[10px] text-indigo-400 font-bold">YOU (HP)</div>
         <div class="w-full bg-slate-700 h-3 rounded-full overflow-hidden mt-1">
-          <div id="hp-you" class="bg-indigo-500 h-full w-full transition-all"></div>
+          <div id="hp-you" class="bg-indigo-500 h-full w-full transition-all duration-200"></div>
         </div>
       </div>
       <div class="text-xs font-bold text-slate-500">VS</div>
       <div class="text-right w-28">
         <div class="text-[10px] text-rose-400 font-bold">ENEMY (HP)</div>
         <div class="w-full bg-slate-700 h-3 rounded-full overflow-hidden mt-1">
-          <div id="hp-enemy" class="bg-rose-500 h-full w-full transition-all"></div>
+          <div id="hp-enemy" class="bg-rose-500 h-full w-full transition-all duration-200"></div>
         </div>
       </div>
     </div>
 
-    <!-- ゲームキャンバス -->
-    <canvas id="gameCanvas" width="320" height="320" class="bg-slate-950 rounded-2xl border-2 border-slate-700 shadow-2xl"></canvas>
+    <!-- ゲームキャンバスエリア（勝敗オーバレイ付き） -->
+    <div class="relative w-[320px] h-[320px]">
+      <canvas id="gameCanvas" width="320" height="320" class="bg-slate-950 rounded-2xl border-2 border-slate-700 shadow-2xl w-full h-full"></canvas>
 
-    <!-- モバイル用コントローラー -->
-    <div class="w-[320px] grid grid-cols-3 gap-2 pt-2">
-      <div class="grid grid-cols-3 gap-1 col-span-2">
-        <div></div>
-        <button onmousedown="inputs.up=true" onmouseup="inputs.up=false" ontouchstart="inputs.up=true" ontouchend="inputs.up=false" class="bg-slate-800 p-3 rounded-xl active:bg-slate-700 text-center">▲</button>
-        <div></div>
-        <button onmousedown="inputs.left=true" onmouseup="inputs.left=false" ontouchstart="inputs.left=true" ontouchend="inputs.left=false" class="bg-slate-800 p-3 rounded-xl active:bg-slate-700 text-center">◀</button>
-        <button onmousedown="inputs.down=true" onmouseup="inputs.down=false" ontouchstart="inputs.down=true" ontouchend="inputs.down=false" class="bg-slate-800 p-3 rounded-xl active:bg-slate-700 text-center">▼</button>
-        <button onmousedown="inputs.right=true" onmouseup="inputs.right=false" ontouchstart="inputs.right=true" ontouchend="inputs.right=false" class="bg-slate-800 p-3 rounded-xl active:bg-slate-700 text-center">▶</button>
+      <!-- 勝敗オーバーレイ -->
+      <div id="result-overlay" class="hidden absolute inset-0 bg-slate-950/90 rounded-2xl flex flex-col items-center justify-center space-y-3 z-20">
+        <div id="result-text" class="text-4xl font-extrabold tracking-wider"></div>
+        <p class="text-xs text-slate-400">ゲーム終了</p>
+        <button onclick="location.reload()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-xs">もう一度遊ぶ</button>
       </div>
-      <div class="flex items-center justify-center">
-        <button onclick="shoot()" class="w-full h-full bg-rose-600 hover:bg-rose-500 active:bg-rose-700 font-bold rounded-2xl text-xs shadow-lg">
-          FIRE<br>🔥
-        </button>
+    </div>
+
+    <!-- 操作エリア（ジョイスティック ＋ FIREボタン） -->
+    <div class="w-[320px] h-32 bg-slate-800/50 rounded-2xl border border-slate-700 relative overflow-hidden flex items-center justify-between px-4">
+      <!-- ジョイスティック操作領域（左側） -->
+      <div id="touch-zone" class="w-40 h-full flex items-center justify-center relative touch-none">
+        <div class="text-[10px] text-slate-500 pointer-events-none">ドラッグで移動</div>
+        <!-- ジョイスティックビジュアル -->
+        <div id="stick-base" class="hidden absolute w-16 h-16 bg-slate-700/60 rounded-full border border-slate-500/50 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+          <div id="stick-knob" class="absolute w-8 h-8 bg-indigo-500/80 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+        </div>
       </div>
+
+      <!-- 攻撃ボタン（右側） -->
+      <button onclick="shoot()" class="w-24 h-24 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 font-bold rounded-2xl text-sm shadow-lg flex flex-col items-center justify-center active:scale-95 transition-transform">
+        <span>FIRE</span>
+        <span class="text-lg">🔥</span>
+      </button>
     </div>
   </div>
 
@@ -89,37 +99,23 @@
     let peer = null, conn = null, isHost = false;
     const CANVAS_SIZE = 320;
     let canvas, ctx;
+    let isGameOver = false;
 
-    // ゲーム状態
+    // HP設定
     let myHp = 100, enemyHp = 100;
     let myTank = { x: 50, y: 270, angle: -Math.PI/2 };
     let enemyTank = { x: 270, y: 50, angle: Math.PI/2 };
-    let bullets = []; // {x, y, vx, vy, isMy}
+    let bullets = []; // {id, x, y, vx, vy, isMy}
 
-    // 障害物（固定ブロック）
+    // 障害物
     const obstacles = [
-      { x: 60, y: 120, w: 60, h: 20 },
-      { x: 200, y: 180, w: 60, h: 20 },
-      { x: 140, y: 140, w: 40, h: 40 }
+      { x: 50, y: 110, w: 70, h: 20 },
+      { x: 200, y: 190, w: 70, h: 20 },
+      { x: 130, y: 130, w: 60, h: 60 }
     ];
 
-    // 入力状態
-    const inputs = { up: false, down: false, left: false, right: false };
-
-    // キーボード操作対応
-    window.addEventListener('keydown', (e) => {
-      if(e.key === 'w' || e.key === 'ArrowUp') inputs.up = true;
-      if(e.key === 's' || e.key === 'ArrowDown') inputs.down = true;
-      if(e.key === 'a' || e.key === 'ArrowLeft') inputs.left = true;
-      if(e.key === 'd' || e.key === 'ArrowRight') inputs.right = true;
-      if(e.key === ' ') shoot();
-    });
-    window.addEventListener('keyup', (e) => {
-      if(e.key === 'w' || e.key === 'ArrowUp') inputs.up = false;
-      if(e.key === 's' || e.key === 'ArrowDown') inputs.down = false;
-      if(e.key === 'a' || e.key === 'ArrowLeft') inputs.left = false;
-      if(e.key === 'd' || e.key === 'ArrowRight') inputs.right = false;
-    });
+    // ジョイスティック入力用
+    let joystickVector = { x: 0, y: 0, active: false };
 
     // --- P2P接続 ---
     function createRoom() {
@@ -152,15 +148,18 @@
       });
 
       conn.on('data', (data) => {
+        if (isGameOver) return;
+
         if (data.type === 'state') {
-          // 相手の位置受取（座標反転）
+          // 相手位置同期（反転）
           enemyTank.x = CANVAS_SIZE - data.tank.x;
           enemyTank.y = CANVAS_SIZE - data.tank.y;
           enemyTank.angle = data.tank.angle + Math.PI;
 
-          // 相手が撃った弾を追加
+          // 敵の新規発射弾
           if (data.newBullet) {
             bullets.push({
+              id: data.newBullet.id,
               x: CANVAS_SIZE - data.newBullet.x,
               y: CANVAS_SIZE - data.newBullet.y,
               vx: -data.newBullet.vx,
@@ -168,51 +167,126 @@
               isMy: false
             });
           }
+        } else if (data.type === 'hit') {
+          // 相手の弾が「自分」に当たった通知
+          takeDamage(data.damage);
         }
       });
+    }
+
+    // --- 仮想ジョイスティック設定 ---
+    function setupJoystick() {
+      const zone = document.getElementById('touch-zone');
+      const base = document.getElementById('stick-base');
+      const knob = document.getElementById('stick-knob');
+      let touchId = null;
+      let startX = 0, startY = 0;
+
+      const handleStart = (e) => {
+        const touch = e.touches ? e.touches[0] : e;
+        touchId = touch.identifier ?? 'mouse';
+        const rect = zone.getBoundingClientRect();
+        startX = touch.clientX - rect.left;
+        startY = touch.clientY - rect.top;
+
+        base.style.left = `${startX}px`;
+        base.style.top = `${startY}px`;
+        base.classList.remove('hidden');
+        knob.style.transform = `translate(-50%, -50%)`;
+
+        joystickVector.active = true;
+      };
+
+      const handleMove = (e) => {
+        if (!joystickVector.active) return;
+        let touch = null;
+        if (e.touches) {
+          for (let t of e.touches) {
+            if (t.identifier === touchId) { touch = t; break; }
+          }
+        } else {
+          touch = e;
+        }
+        if (!touch) return;
+
+        const rect = zone.getBoundingClientRect();
+        const currentX = touch.clientX - rect.left;
+        const currentY = touch.clientY - rect.top;
+
+        let dx = currentX - startX;
+        let dy = currentY - startY;
+        const dist = Math.hypot(dx, dy);
+        const maxRadius = 32;
+
+        if (dist > maxRadius) {
+          dx = (dx / dist) * maxRadius;
+          dy = (dy / dist) * maxRadius;
+        }
+
+        knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+        joystickVector.x = dx / maxRadius;
+        joystickVector.y = dy / maxRadius;
+      };
+
+      const handleEnd = () => {
+        joystickVector.active = false;
+        joystickVector.x = 0;
+        joystickVector.y = 0;
+        base.classList.add('hidden');
+      };
+
+      zone.addEventListener('touchstart', handleStart);
+      zone.addEventListener('touchmove', handleMove);
+      zone.addEventListener('touchend', handleEnd);
+      zone.addEventListener('mousedown', handleStart);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
     }
 
     // --- ゲームループ ---
     function initGame() {
       canvas = document.getElementById('gameCanvas');
       ctx = canvas.getContext('2d');
+      setupJoystick();
       requestAnimationFrame(gameLoop);
     }
 
     let lastShot = 0;
     function shoot() {
       const now = Date.now();
-      if (now - lastShot < 400 || myHp <= 0) return; // 連射制限
+      if (now - lastShot < 350 || myHp <= 0 || isGameOver) return;
       lastShot = now;
 
+      const bulletId = Math.random().toString(36).substring(2, 9);
       const b = {
-        x: myTank.x + Math.cos(myTank.angle) * 15,
-        y: myTank.y + Math.sin(myTank.angle) * 15,
-        vx: Math.cos(myTank.angle) * 5,
-        vy: Math.sin(myTank.angle) * 5,
+        id: bulletId,
+        x: myTank.x + Math.cos(myTank.angle) * 16,
+        y: myTank.y + Math.sin(myTank.angle) * 16,
+        vx: Math.cos(myTank.angle) * 5.5,
+        vy: Math.sin(myTank.angle) * 5.5,
         isMy: true
       };
       bullets.push(b);
 
-      // 弾を撃ったイベントを送る
       if (conn && conn.open) {
         conn.send({
           type: 'state',
           tank: myTank,
-          newBullet: { x: b.x, y: b.y, vx: b.vx, vy: b.vy }
+          newBullet: { id: b.id, x: b.x, y: b.y, vx: b.vx, vy: b.vy }
         });
       }
 
-      if (navigator.vibrate) navigator.vibrate(30);
+      if (navigator.vibrate) navigator.vibrate(25);
     }
 
     function gameLoop() {
-      updateTank();
-      updateBullets();
-      
-      // 定期的に自機位置を送信
-      if (conn && conn.open && Math.random() < 0.3) {
-        conn.send({ type: 'state', tank: myTank });
+      if (!isGameOver) {
+        updateTank();
+        updateBullets();
+
+        if (conn && conn.open && Math.random() < 0.2) {
+          conn.send({ type: 'state', tank: myTank });
+        }
       }
 
       draw();
@@ -221,36 +295,29 @@
 
     function updateTank() {
       if (myHp <= 0) return;
-      const speed = 2;
-      const rotSpeed = 0.05;
 
-      if (inputs.left) myTank.angle -= rotSpeed;
-      if (inputs.right) myTank.angle += rotSpeed;
+      if (joystickVector.active) {
+        const speed = 2.2;
+        const targetAngle = Math.atan2(joystickVector.y, joystickVector.x);
+        myTank.angle = targetAngle;
 
-      let nextX = myTank.x;
-      let nextY = myTank.y;
+        let nextX = myTank.x + joystickVector.x * speed;
+        let nextY = myTank.y + joystickVector.y * speed;
 
-      if (inputs.up) {
-        nextX += Math.cos(myTank.angle) * speed;
-        nextY += Math.sin(myTank.angle) * speed;
-      }
-      if (inputs.down) {
-        nextX -= Math.cos(myTank.angle) * speed;
-        nextY -= Math.sin(myTank.angle) * speed;
-      }
-
-      // 壁・障害物判定
-      if (nextX > 10 && nextX < CANVAS_SIZE - 10 && nextY > 10 && nextY < CANVAS_SIZE - 10) {
-        let collide = false;
-        for (let obs of obstacles) {
-          if (nextX > obs.x && nextX < obs.x + obs.w && nextY > obs.y && nextY < obs.y + obs.h) {
-            collide = true;
-            break;
+        // 壁判定
+        if (nextX > 14 && nextX < CANVAS_SIZE - 14 && nextY > 14 && nextY < CANVAS_SIZE - 14) {
+          let collide = false;
+          for (let obs of obstacles) {
+            if (nextX + 10 > obs.x && nextX - 10 < obs.x + obs.w &&
+                nextY + 10 > obs.y && nextY - 10 < obs.y + obs.h) {
+              collide = true;
+              break;
+            }
           }
-        }
-        if (!collide) {
-          myTank.x = nextX;
-          myTank.y = nextY;
+          if (!collide) {
+            myTank.x = nextX;
+            myTank.y = nextY;
+          }
         }
       }
     }
@@ -261,7 +328,7 @@
         b.x += b.vx;
         b.y += b.vy;
 
-        // 壁判定
+        // 枠外判定
         if (b.x < 0 || b.x > CANVAS_SIZE || b.y < 0 || b.y > CANVAS_SIZE) {
           bullets.splice(i, 1);
           continue;
@@ -280,33 +347,71 @@
           continue;
         }
 
-        // 敵の弾が「自分」に当たったか判定
-        if (!b.isMy) {
-          const dist = Math.hypot(b.x - myTank.x, b.y - myTank.y);
-          if (dist < 12) {
-            myHp = Math.max(0, myHp - 15);
-            document.getElementById('hp-you').style.width = myHp + '%';
-            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+        // 当たり判定（自分の弾が「相手」に当たったか判定）
+        if (b.isMy) {
+          const dist = Math.hypot(b.x - enemyTank.x, b.y - enemyTank.y);
+          if (dist < 14) {
+            // 相手にダメージを与える
+            enemyHp = Math.max(0, enemyHp - 20);
+            document.getElementById('hp-enemy').style.width = enemyHp + '%';
+
+            if (conn && conn.open) {
+              conn.send({ type: 'hit', damage: 20 });
+            }
+
             bullets.splice(i, 1);
+
+            // 勝利判定
+            if (enemyHp <= 0) {
+              endGame(true);
+            }
           }
         }
+      }
+    }
+
+    function takeDamage(amount) {
+      if (isGameOver) return;
+      myHp = Math.max(0, myHp - amount);
+      document.getElementById('hp-you').style.width = myHp + '%';
+
+      if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+
+      // 敗北判定
+      if (myHp <= 0) {
+        endGame(false);
+      }
+    }
+
+    function endGame(isWin) {
+      isGameOver = true;
+      const overlay = document.getElementById('result-overlay');
+      const text = document.getElementById('result-text');
+
+      overlay.classList.remove('hidden');
+      if (isWin) {
+        text.innerText = "YOU WIN! 🎉";
+        text.className = "text-3xl font-extrabold text-emerald-400 tracking-wider animate-bounce";
+      } else {
+        text.innerText = "YOU LOSE... 💀";
+        text.className = "text-3xl font-extrabold text-rose-500 tracking-wider";
       }
     }
 
     function draw() {
       ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // 障害物描画
+      // 障害物
       ctx.fillStyle = '#475569';
       for (let obs of obstacles) {
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
       }
 
-      // 弾描画
+      // 弾
       for (let b of bullets) {
         ctx.fillStyle = b.isMy ? '#818cf8' : '#f87171';
         ctx.beginPath();
-        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, 3.5, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -323,11 +428,11 @@
 
       // 車体
       ctx.fillStyle = color;
-      ctx.fillRect(-10, -10, 20, 20);
+      ctx.fillRect(-12, -12, 24, 24);
 
       // 砲身
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, -2, 14, 4);
+      ctx.fillRect(0, -3, 16, 6);
 
       ctx.restore();
     }
