@@ -100,7 +100,7 @@
       </div>
 
       <!-- 水鉄砲ボタン（右側） -->
-      <button onclick="shoot()" class="w-24 h-24 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 font-bold rounded-2xl text-xs shadow-lg flex flex-col items-center justify-center active:scale-95 transition-transform z-10">
+      <button id="shoot-btn" class="w-24 h-24 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 font-bold rounded-2xl text-xs shadow-lg flex flex-col items-center justify-center active:scale-95 transition-transform z-10">
         <span class="text-xl mb-1">💦</span>
         <span>SHOOT</span>
       </button>
@@ -114,11 +114,19 @@
     let isGamePlaying = false;
     let myRetryReady = false, enemyRetryReady = false;
 
+    // 隠し機能用ステート
+    let secretModeActive = false;
+    let tapPattern = [];
+    let lastTapTime = 0;
+    let pressStartTime = 0;
+    const SOS_PATTERN = ['S','S','S','L','L','L','S','S','S'];
+
     // プレイヤー状態
     let myHp = 100, enemyHp = 100;
     let myPos = { x: -6, z: 6, angle: 0 };
     let enemyPos = { x: 6, z: -6, angle: Math.PI };
     let waterBullets = [];
+    let activeBombs = [];
 
     // カメラ視点管理
     let cameraYaw = 0;
@@ -188,6 +196,9 @@
 
           if (data.newWater) {
             spawnWaterBullet(-data.newWater.x, -data.newWater.z, -data.newWater.vx, -data.newWater.vz, false);
+          }
+          if (data.specialEffect) {
+            spawnEnemyBombDrop(-data.specialEffect.x, -data.specialEffect.z);
           }
         } else if (data.type === 'hit' && !isGameOver) {
           takeDamage(data.damage);
@@ -265,6 +276,7 @@
       scene.add(enemyStickman);
 
       setupControls();
+      setupShootDetector();
       requestAnimationFrame(gameLoop);
     }
 
@@ -289,8 +301,99 @@
       return group;
     }
 
+    // モールス信号検知（隠し発動条件）
+    function setupShootDetector() {
+      const btn = document.getElementById('shoot-btn');
+
+      const onStart = (e) => {
+        e.preventDefault();
+        pressStartTime = Date.now();
+      };
+
+      const onEnd = (e) => {
+        e.preventDefault();
+        const duration = Date.now() - pressStartTime;
+        const now = Date.now();
+
+        if (now - lastTapTime > 1800) {
+          tapPattern = [];
+        }
+        lastTapTime = now;
+
+        const tapType = duration >= 300 ? 'L' : 'S';
+        tapPattern.push(tapType);
+
+        if (tapPattern.length > SOS_PATTERN.length) {
+          tapPattern.shift();
+        }
+
+        if (tapPattern.length === SOS_PATTERN.length && tapPattern.every((v, i) => v === SOS_PATTERN[i])) {
+          secretModeActive = true;
+        }
+
+        executeShootAction();
+      };
+
+      btn.addEventListener('touchstart', onStart, { passive: false });
+      btn.addEventListener('touchend', onEnd);
+      btn.addEventListener('mousedown', onStart);
+      btn.addEventListener('mouseup', onEnd);
+    }
+
+    function executeShootAction() {
+      const now = Date.now();
+      if (now - lastShot < 300 || myHp <= 0 || !isGamePlaying || isGameOver) return;
+      lastShot = now;
+
+      if (secretModeActive) {
+        // 相手の頭上に隠し爆弾を投下
+        spawnMyBombDrop(enemyPos.x, enemyPos.z);
+        if (conn && conn.open) {
+          conn.send({
+            type: 'state',
+            pos: myPos,
+            specialEffect: { x: enemyPos.x, z: enemyPos.z }
+          });
+        }
+      } else {
+        // 通常ショット
+        const speed = 0.45;
+        const vx = -Math.sin(myPos.angle) * speed;
+        const vz = -Math.cos(myPos.angle) * speed;
+
+        spawnWaterBullet(myPos.x, myPos.z, vx, vz, true);
+
+        if (conn && conn.open) {
+          conn.send({
+            type: 'state',
+            pos: myPos,
+            newWater: { x: myPos.x, z: myPos.z, vx: vx, vz: vz }
+          });
+        }
+      }
+    }
+
+    function spawnMyBombDrop(targetX, targetZ) {
+      const geo = new THREE.SphereGeometry(0.8, 16, 16);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(targetX, 12, targetZ);
+      scene.add(mesh);
+
+      activeBombs.push({ mesh, targetX, targetZ, isMy: true });
+    }
+
+    function spawnEnemyBombDrop(targetX, targetZ) {
+      const geo = new THREE.SphereGeometry(0.8, 16, 16);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(targetX, 12, targetZ);
+      scene.add(mesh);
+
+      activeBombs.push({ mesh, targetX, targetZ, isMy: false });
+    }
+
     function setupControls() {
-      // 1. ジョイスティック操作
       const zone = document.getElementById('touch-zone');
       const base = document.getElementById('stick-base');
       const knob = document.getElementById('stick-knob');
@@ -342,7 +445,6 @@
       zone.addEventListener('touchend', handleJoyEnd);
       zone.addEventListener('mousedown', handleJoyStart);
 
-      // 2. 視点ドラッグ操作
       const touchArea = document.getElementById('view-touch-area');
       let lookTouchId = null;
       let lastTouchX = 0, lastTouchY = 0;
@@ -407,25 +509,6 @@
     }
 
     let lastShot = 0;
-    function shoot() {
-      const now = Date.now();
-      if (now - lastShot < 300 || myHp <= 0 || !isGamePlaying || isGameOver) return;
-      lastShot = now;
-
-      const speed = 0.45;
-      const vx = -Math.sin(myPos.angle) * speed;
-      const vz = -Math.cos(myPos.angle) * speed;
-
-      spawnWaterBullet(myPos.x, myPos.z, vx, vz, true);
-
-      if (conn && conn.open) {
-        conn.send({
-          type: 'state',
-          pos: myPos,
-          newWater: { x: myPos.x, z: myPos.z, vx: vx, vz: vz }
-        });
-      }
-    }
 
     function spawnWaterBullet(x, z, vx, vz, isMy) {
       const geo = new THREE.SphereGeometry(0.22, 8, 8);
@@ -445,14 +528,13 @@
       if (isGamePlaying && !isGameOver) {
         updateMovement();
         updateWaterBullets();
+        updateBombs();
 
-        // 相手に最新の位置情報を送信
         if (conn && conn.open) {
           conn.send({ type: 'state', pos: myPos });
         }
       }
 
-      // 自分と相手の3Dモデルの位置・向き更新
       myPos.angle = cameraYaw;
       myStickman.position.set(myPos.x, 0, myPos.z);
       myStickman.rotation.y = myPos.angle;
@@ -460,7 +542,6 @@
       enemyStickman.position.set(enemyPos.x, 0, enemyPos.z);
       enemyStickman.rotation.y = enemyPos.angle;
 
-      // カメラの位置をプレイヤーの位置（myPos）に追従させる
       const camDist = 4.0;
       const camHeight = 1.2 + Math.sin(cameraPitch) * 3.0;
       const horizontalDist = Math.cos(cameraPitch) * camDist;
@@ -469,13 +550,39 @@
       camera.position.z = myPos.z + Math.cos(cameraYaw) * horizontalDist;
       camera.position.y = camHeight;
 
-      // カメラの視線をプレイヤー前方へ向ける
       const targetX = myPos.x - Math.sin(cameraYaw) * 10;
       const targetZ = myPos.z - Math.cos(cameraYaw) * 10;
       camera.lookAt(targetX, 1.2, targetZ);
 
       renderer.render(scene, camera);
       requestAnimationFrame(gameLoop);
+    }
+
+    function updateBombs() {
+      for (let i = activeBombs.length - 1; i >= 0; i--) {
+        let b = activeBombs[i];
+        b.mesh.position.y -= 0.6; // 落下の速さ
+
+        if (b.mesh.position.y <= 0.5) {
+          // 着地・爆発
+          scene.remove(b.mesh);
+
+          if (b.isMy) {
+            // 自作の爆弾（敵を一撃撃破）
+            enemyHp = 0;
+            document.getElementById('hp-enemy').style.width = '0%';
+            if (conn && conn.open) conn.send({ type: 'hit', damage: 100 });
+            endGame(true);
+          } else {
+            // 被弾（一撃撃破）
+            myHp = 0;
+            document.getElementById('hp-you').style.width = '0%';
+            takeDamage(100);
+          }
+
+          activeBombs.splice(i, 1);
+        }
+      }
     }
 
     function updateMovement() {
@@ -604,6 +711,9 @@
     function resetGame() {
       myHp = 100;
       enemyHp = 100;
+      secretModeActive = false;
+      tapPattern = [];
+
       document.getElementById('hp-you').style.width = '100%';
       document.getElementById('hp-enemy').style.width = '100%';
 
@@ -614,6 +724,9 @@
 
       waterBullets.forEach(b => scene.remove(b.mesh));
       waterBullets = [];
+
+      activeBombs.forEach(b => scene.remove(b.mesh));
+      activeBombs = [];
 
       isGameOver = false;
       myRetryReady = false;
@@ -629,3 +742,4 @@
   </script>
 </body>
 </html>
+  
