@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NEON BUMPER - Cheat Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>NEON BUMPER - Touch Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
@@ -15,10 +15,10 @@
     }
   </style>
 </head>
-<body id="body-root" class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
+<body id="body-root" class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 overflow-hidden">
 
   <!-- ロビー画面 -->
-  <div id="lobby" class="w-full max-w-md bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center space-y-6 shadow-2xl">
+  <div id="lobby" class="w-full max-w-md bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center space-y-6 shadow-2xl my-auto">
     <div>
       <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text text-transparent">
         NEON BUMPER
@@ -53,57 +53,59 @@
   </div>
 
   <!-- 対戦画面 -->
-  <div id="game-container" class="hidden flex-col items-center space-y-4">
+  <div id="game-container" class="hidden flex-col items-center justify-between w-full max-w-md h-full flex-1 py-2">
     <!-- スコアボード -->
-    <div class="flex items-center justify-between w-full max-w-lg px-6 py-3 bg-slate-900 border border-slate-800 rounded-2xl">
+    <div class="flex items-center justify-between w-full px-4 py-2 bg-slate-900 border border-slate-800 rounded-2xl">
       <div class="flex items-center space-x-2">
         <span class="w-3 h-3 rounded-full bg-cyan-400 shadow-lg shadow-cyan-500/50"></span>
-        <span class="text-sm font-bold text-cyan-400">P1 (青)</span>
-        <span id="p1-score" class="text-xl font-black text-white font-mono ml-2">0</span>
+        <span class="text-xs font-bold text-cyan-400">P1 (青)</span>
+        <span id="p1-score" class="text-lg font-black text-white font-mono ml-1">0</span>
       </div>
-      <div class="text-xs text-slate-500 font-bold">FIRST TO 3</div>
+      <div class="text-[10px] text-slate-500 font-bold">FIRST TO 3</div>
       <div class="flex items-center space-x-2">
-        <span id="p2-score" class="text-xl font-black text-white font-mono mr-2">0</span>
-        <span class="text-sm font-bold text-pink-400">P2 (赤)</span>
+        <span id="p2-score" class="text-lg font-black text-white font-mono mr-1">0</span>
+        <span class="text-xs font-bold text-pink-400">P2 (赤)</span>
         <span class="w-3 h-3 rounded-full bg-pink-400 shadow-lg shadow-pink-500/50"></span>
       </div>
     </div>
 
-    <!-- ゲーム画面 -->
-    <div class="relative">
-      <canvas id="gameCanvas" width="500" height="500" class="bg-slate-900 border-2 border-slate-800 rounded-full shadow-2xl cursor-crosshair"></canvas>
+    <!-- ゲーム画面 (レスポンシブサイズ) -->
+    <div class="relative flex items-center justify-center my-auto">
+      <canvas id="gameCanvas" width="360" height="360" class="bg-slate-900 border-2 border-slate-800 rounded-full shadow-2xl cursor-crosshair max-w-[85vw] max-h-[85vw]"></canvas>
       <div id="status-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-950/80 rounded-full hidden">
-        <span id="status-message" class="text-2xl font-black text-cyan-400 animate-bounce">READY</span>
+        <span id="status-message" class="text-xl font-black text-cyan-400 animate-bounce">READY</span>
       </div>
     </div>
 
-    <div class="text-xs text-slate-400 font-medium">
-      【操作】 <b>WASD</b> または <b>矢印キー</b> で移動
+    <!-- スマホ用ジョイスティックコントローラー -->
+    <div class="w-full flex justify-center py-2">
+      <div id="joystick-zone" class="w-28 h-28 bg-slate-900/80 border-2 border-slate-700/50 rounded-full relative touch-none flex items-center justify-center">
+        <div id="joystick-knob" class="w-10 h-10 bg-cyan-500/80 border-2 border-cyan-300 rounded-full absolute transition-transform ease-out duration-75 shadow-lg shadow-cyan-500/30"></div>
+      </div>
     </div>
   </div>
 
   <script>
-    const PEER_PREFIX = "tong-bumper-v1-";
+    const PEER_PREFIX = "tong-bumper-v2-";
     let peer = null, conn = null, isHost = false;
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    const CENTER = 250, ARENA_RADIUS = 220, BALL_RADIUS = 18;
+    const CENTER = 180, ARENA_RADIUS = 160, BALL_RADIUS = 14;
 
-    let p1 = { x: 170, y: 250, vx: 0, vy: 0, color: '#38bdf8' };
-    let p2 = { x: 330, y: 250, vx: 0, vy: 0, color: '#f43f5e' };
+    let p1 = { x: 120, y: 180, vx: 0, vy: 0, color: '#38bdf8' };
+    let p2 = { x: 240, y: 180, vx: 0, vy: 0, color: '#f43f5e' };
     let p1Score = 0, p2Score = 0;
     let isRoundActive = false;
 
-    // チート・無敵ボール関係
     let cheatRainBalls = [];
     let cheatActive = false;
 
     const myInputs = { up: false, down: false, left: false, right: false };
     let guestInputs = { up: false, down: false, left: false, right: false };
 
-    // --- キー入力 ---
+    // --- キーボード入力 ---
     window.addEventListener('keydown', e => handleKey(e, true));
     window.addEventListener('keyup', e => handleKey(e, false));
 
@@ -113,6 +115,62 @@
       if (['ArrowLeft', 'KeyA'].includes(e.code)) myInputs.left = state;
       if (['ArrowRight', 'KeyD'].includes(e.code)) myInputs.right = state;
 
+      sendInputUpdate();
+    }
+
+    // --- スマホ用バーチャルジョイスティック ---
+    const stickZone = document.getElementById('joystick-zone');
+    const stickKnob = document.getElementById('joystick-knob');
+    let stickActive = false;
+    let stickCenter = { x: 0, y: 0 };
+
+    stickZone.addEventListener('touchstart', e => {
+      e.preventDefault();
+      stickActive = true;
+      const rect = stickZone.getBoundingClientRect();
+      stickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      updateStick(e.touches[0]);
+    });
+
+    stickZone.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (stickActive) updateStick(e.touches[0]);
+    });
+
+    const resetStick = () => {
+      stickActive = false;
+      stickKnob.style.transform = `translate(0px, 0px)`;
+      myInputs.up = myInputs.down = myInputs.left = myInputs.right = false;
+      sendInputUpdate();
+    };
+
+    stickZone.addEventListener('touchend', resetStick);
+    stickZone.addEventListener('touchcancel', resetStick);
+
+    function updateStick(touch) {
+      const dx = touch.clientX - stickCenter.x;
+      const dy = touch.clientY - stickCenter.y;
+      const dist = Math.hypot(dx, dy);
+      const maxRadius = 35;
+
+      const angle = Math.atan2(dy, dx);
+      const clampedDist = Math.min(dist, maxRadius);
+      const knobX = Math.cos(angle) * clampedDist;
+      const knobY = Math.sin(angle) * clampedDist;
+
+      stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+
+      // しきい値を超えたら方向入力
+      const threshold = 10;
+      myInputs.left = dx < -threshold;
+      myInputs.right = dx > threshold;
+      myInputs.up = dy < -threshold;
+      myInputs.down = dy > threshold;
+
+      sendInputUpdate();
+    }
+
+    function sendInputUpdate() {
       if (!isHost && conn && conn.open) {
         conn.send({ type: 'INPUT', inputs: myInputs });
       }
@@ -120,26 +178,22 @@
 
     // --- SOSタップ検知機能（画面外タップ） ---
     let tapHistory = [];
-    const SOS_PATTERN = [0, 0, 0, 1, 1, 1, 0, 0, 0]; // 0: 短 (＜250ms), 1: 長 (≧250ms)
+    const SOS_PATTERN = [0, 0, 0, 1, 1, 1, 0, 0, 0];
 
     window.addEventListener('pointerdown', e => {
-      // キャンバス内での操作は除外（画面外限定）
-      if (e.target === canvas) return;
+      if (e.target === canvas || stickZone.contains(e.target)) return;
       window.lastTapStart = Date.now();
     });
 
     window.addEventListener('pointerup', e => {
-      if (e.target === canvas || !window.lastTapStart) return;
+      if (e.target === canvas || stickZone.contains(e.target) || !window.lastTapStart) return;
       const duration = Date.now() - window.lastTapStart;
       const type = duration > 250 ? 1 : 0;
       const now = Date.now();
 
       tapHistory.push({ type, time: now });
-
-      // 3秒以内のタップ履歴のみ保持
       tapHistory = tapHistory.filter(t => now - t.time <= 3000);
 
-      // 直近9回のタップがSOSパターンに一致するか判定
       if (tapHistory.length >= 9) {
         const recent = tapHistory.slice(-9).map(t => t.type);
         if (recent.every((val, idx) => val === SOS_PATTERN[idx])) {
@@ -166,21 +220,20 @@
     function spawnCheatRain(attacker, color) {
       showMessage("🚨 CHEAT ACTIVATED 🚨");
       
-      // 30個の巨大無敵ボールを生成
       for (let i = 0; i < 30; i++) {
         cheatRainBalls.push({
-          x: CENTER + (Math.random() - 0.5) * 200,
-          y: -50 - (i * 40),
-          vx: (Math.random() - 0.5) * 4,
-          vy: 12 + Math.random() * 8,
-          radius: 25,
+          x: CENTER + (Math.random() - 0.5) * 150,
+          y: -40 - (i * 30),
+          vx: (Math.random() - 0.5) * 3,
+          vy: 10 + Math.random() * 6,
+          radius: 20,
           color: color,
           attacker: attacker
         });
       }
     }
 
-    // --- P2P 4桁接続 ---
+    // --- P2P 接続 ---
     function createRoom() {
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       document.getElementById('my-code-display').innerText = code;
@@ -194,9 +247,7 @@
         conn = c;
         setupConnection();
       });
-      peer.on('error', err => {
-        if(err.type === 'unavailable-id') createRoom(); // 重複時は再生成
-      });
+      peer.on('error', err => { if(err.type === 'unavailable-id') createRoom(); });
     }
 
     function joinRoom() {
@@ -248,9 +299,9 @@
       });
     }
 
-    // --- 物理処理（ホスト統括） ---
+    // --- 物理演算 (ホスト) ---
     function updatePhysics(p, inputs) {
-      const accel = 0.6, friction = 0.96;
+      const accel = 0.5, friction = 0.95;
       if (inputs.up) p.vy -= accel;
       if (inputs.down) p.vy += accel;
       if (inputs.left) p.vx -= accel;
@@ -265,7 +316,6 @@
         updatePhysics(p1, myInputs);
         updatePhysics(p2, guestInputs);
 
-        // プレイヤー同士の衝突
         const dx = p2.x - p1.x, dy = p2.y - p1.y, dist = Math.hypot(dx, dy);
         if (dist < BALL_RADIUS * 2) {
           const overlap = (BALL_RADIUS * 2) - dist;
@@ -278,7 +328,6 @@
           p2.vx += p * nx * 1.5; p2.vy += p * ny * 1.5;
         }
 
-        // 無敵降下ボールの更新＆ターゲット押しつぶし
         for (let i = cheatRainBalls.length - 1; i >= 0; i--) {
           let b = cheatRainBalls[i];
           b.y += b.vy; b.x += b.vx;
@@ -286,16 +335,14 @@
           let target = b.attacker === 'p1' ? p2 : p1;
           let tDx = target.x - b.x, tDy = target.y - b.y, tDist = Math.hypot(tDx, tDy);
 
-          // 超強力な吹き飛ばし衝撃波
           if (tDist < b.radius + BALL_RADIUS) {
-            target.vx += (tDx / (tDist || 1)) * 25;
-            target.vy += (tDy / (tDist || 1)) * 25;
+            target.vx += (tDx / (tDist || 1)) * 20;
+            target.vy += (tDy / (tDist || 1)) * 20;
           }
 
           if (b.y > canvas.height + 100) cheatRainBalls.splice(i, 1);
         }
 
-        // リングアウト判定
         const d1 = Math.hypot(p1.x - CENTER, p1.y - CENTER);
         const d2 = Math.hypot(p2.x - CENTER, p2.y - CENTER);
 
@@ -310,10 +357,7 @@
       render();
 
       if (conn && conn.open) {
-        conn.send({
-          type: 'STATE',
-          p1, p2, p1Score, p2Score, cheatRainBalls
-        });
+        conn.send({ type: 'STATE', p1, p2, p1Score, p2Score, cheatRainBalls });
       }
 
       requestAnimationFrame(gameLoopHost);
@@ -335,8 +379,8 @@
     }
 
     function startNewRound(msg) {
-      p1.x = 170; p1.y = 250; p1.vx = 0; p1.vy = 0;
-      p2.x = 330; p2.y = 250; p2.vx = 0; p2.vy = 0;
+      p1.x = 120; p1.y = 180; p1.vx = 0; p1.vy = 0;
+      p2.x = 240; p2.y = 180; p2.vx = 0; p2.vy = 0;
       cheatRainBalls = [];
       sendMsg(msg);
       setTimeout(() => { isRoundActive = true; }, 1000);
@@ -371,14 +415,13 @@
       ctx.fillStyle = '#0f172a';
       ctx.fill();
       ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
-      // 降下中の無敵ボール描画
       cheatRainBalls.forEach(b => {
         ctx.save();
         ctx.shadowColor = b.color;
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 15;
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
         ctx.fillStyle = b.color;
@@ -386,7 +429,6 @@
         ctx.restore();
       });
 
-      // プレイヤー描画
       drawBall(p1.x, p1.y, '#38bdf8', '#0284c7');
       drawBall(p2.x, p2.y, '#f43f5e', '#be123c');
     }
@@ -394,7 +436,7 @@
     function drawBall(x, y, mainColor, glowColor) {
       ctx.save();
       ctx.shadowColor = glowColor;
-      ctx.shadowBlur = 15;
+      ctx.shadowBlur = 12;
       ctx.beginPath();
       ctx.arc(x, y, BALL_RADIUS, 0, Math.PI * 2);
       ctx.fillStyle = mainColor;
