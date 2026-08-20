@@ -2,443 +2,321 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NEON BUMPER - Cheat Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>コンビニ店長シミュレーター</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
-    body { user-select: none; touch-action: manipulation; }
-    .cheat-active { animation: pulse-red 0.5s infinite alternate; }
-    @keyframes pulse-red {
-      from { box-shadow: inset 0 0 20px #ef4444; }
-      to { box-shadow: inset 0 0 80px #dc2626; }
-    }
+    body { user-select: none; }
+    .log-entry { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
-<body id="body-root" class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 overflow-hidden">
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-2 sm:p-4">
 
-  <!-- ロビー画面 -->
-  <div id="lobby" class="w-full max-w-md bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center space-y-6 shadow-2xl my-auto">
-    <div>
-      <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text text-transparent">
-        NEON BUMPER
-      </h1>
-      <p class="text-xs text-slate-400 mt-1">4桁コードで簡単マッチング</p>
-    </div>
-
-    <!-- 部屋作成（ホスト） -->
-    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-      <div class="text-xs font-bold text-slate-300">① 部屋を作って4桁コードを教える</div>
-      <button id="btn-create" onclick="createRoom()" class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black rounded-xl text-sm transition">
-        部屋を作る 🚀
-      </button>
-
-      <div id="host-info" class="hidden space-y-2 pt-2">
-        <div class="text-[10px] text-slate-400">あなたの対戦コード:</div>
-        <div id="my-code-display" class="text-3xl font-black font-mono tracking-widest text-cyan-400 py-1">----</div>
-        <div class="text-[11px] text-amber-400 animate-pulse font-bold">相手の接続を待っています...</div>
+  <!-- ヘッダー（ダッシュボード） -->
+  <div class="max-w-4xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4 shadow-xl flex flex-wrap justify-between items-center gap-4">
+    <div class="flex items-center space-x-3">
+      <span class="text-3xl">🏪</span>
+      <div>
+        <h1 class="font-black text-xl bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">マート・マスター</h1>
+        <div class="text-xs text-slate-400">日 AUTOMATIC SIMULATOR</div>
       </div>
     </div>
 
-    <div class="text-xs text-slate-600 font-bold">- OR -</div>
-
-    <!-- 部屋参加（ゲスト） -->
-    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-      <div class="text-xs font-bold text-slate-300">② 4桁コードを入力して参加する</div>
-      <input id="join-code-input" type="number" maxlength="4" placeholder="4桁の数字" class="w-full bg-slate-900 border border-slate-700 text-lg font-mono text-center px-3 py-2 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 tracking-widest">
-      <button id="btn-join" onclick="joinRoom()" class="w-full py-3 bg-pink-500 hover:bg-pink-400 text-slate-950 font-black rounded-xl text-sm transition">
-        対戦に参加する ⚔️
-      </button>
+    <div class="flex items-center space-x-6 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
+      <div>
+        <div class="text-[10px] text-slate-500 font-bold">経過日数</div>
+        <div id="day-display" class="text-lg font-black text-amber-400 font-mono">第 1 日目</div>
+      </div>
+      <div>
+        <div class="text-[10px] text-slate-500 font-bold">所持金</div>
+        <div id="money-display" class="text-lg font-black text-emerald-400 font-mono">¥50,000</div>
+      </div>
+      <div>
+        <div class="text-[10px] text-slate-500 font-bold">本日の天候</div>
+        <div id="weather-display" class="text-sm font-bold text-cyan-300">☀️ 晴れ</div>
+      </div>
+      <div>
+        <div class="text-[10px] text-slate-500 font-bold">評判</div>
+        <div id="reputation-display" class="text-sm font-bold text-pink-400">⭐️ 50</div>
+      </div>
     </div>
+
+    <button id="btn-next-day" onclick="nextDay()" class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-xl text-sm transition shadow-lg active:scale-95">
+      翌日へ進む ➔
+    </button>
   </div>
 
-  <!-- 対戦画面 -->
-  <div id="game-container" class="hidden flex-col items-center justify-between w-full max-w-md h-full flex-1 py-2">
-    <!-- スコアボード -->
-    <div class="flex items-center justify-between w-full px-4 py-2 bg-slate-900 border border-slate-800 rounded-2xl">
-      <div class="flex items-center space-x-2">
-        <span class="w-3 h-3 rounded-full bg-cyan-400 shadow-lg shadow-cyan-500/50"></span>
-        <span class="text-xs font-bold text-cyan-400">P1 (青)</span>
-        <span id="p1-score" class="text-lg font-black text-white font-mono ml-1">0</span>
-      </div>
-      
-      <!-- ★ここにチートトリガーを設定（3回タップで起動） -->
-      <div id="cheat-trigger" onclick="handleCheatTap()" class="text-[10px] text-slate-500 font-bold cursor-pointer select-none active:scale-95 transition-transform px-2 py-1">
-        FIRST TO 3
+  <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+    
+    <!-- 左カラム: 仕入れ & 在庫管理 -->
+    <div class="md:col-span-2 space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <h2 class="text-sm font-bold text-slate-300 mb-3 flex items-center justify-between">
+          <span>📦 商品の仕入れ & 価格設定</span>
+          <span class="text-xs text-slate-500 font-normal">棚容量: <span id="shelf-usage">0</span> / <span id="shelf-capacity">100</span> 個</span>
+        </h2>
+
+        <div id="item-list" class="space-y-3">
+          <!-- 動的生成される商品カード -->
+        </div>
       </div>
 
-      <div class="flex items-center space-x-2">
-        <span id="p2-score" class="text-lg font-black text-white font-mono mr-1">0</span>
-        <span class="text-xs font-bold text-pink-400">P2 (赤)</span>
-        <span class="w-3 h-3 rounded-full bg-pink-400 shadow-lg shadow-pink-500/50"></span>
+      <!-- 店舗設備 & バイト採用 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+        <h2 class="text-sm font-bold text-slate-300">🛠 店舗拡張 & 雇用</h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+            <div>
+              <div class="text-xs font-bold text-slate-200">大型陳列棚の追加</div>
+              <div class="text-[10px] text-slate-500">容量 +50個 (コスト: ¥20,000)</div>
+            </div>
+            <button onclick="upgradeShelf()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-xs">拡張</button>
+          </div>
+
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+            <div>
+              <div class="text-xs font-bold text-slate-200">アルバイト雇用</div>
+              <div class="text-[10px] text-slate-500">ワンオペ防止/日給: ¥5,000</div>
+              <div class="text-[10px] text-amber-400">現在: <span id="staff-count">0</span>人</div>
+            </div>
+            <button onclick="hireStaff()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-xs">雇う</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ゲーム画面 -->
-    <div class="relative flex items-center justify-center my-auto">
-      <canvas id="gameCanvas" width="360" height="360" class="bg-slate-900 border-2 border-slate-800 rounded-full shadow-2xl cursor-crosshair max-w-[85vw] max-h-[85vw]"></canvas>
-      <div id="status-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-950/80 rounded-full hidden">
-        <span id="status-message" class="text-xl font-black text-cyan-400 animate-bounce">READY</span>
+    <!-- 右カラム: ニュース & 日報ログ -->
+    <div class="space-y-4">
+      <!-- ニュース・トレンド -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <h2 class="text-sm font-bold text-slate-300 mb-2">📰 本日のトレンド・噂</h2>
+        <div id="news-box" class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-amber-300 leading-relaxed font-mono">
+          平和な一日になりそうだ...
+        </div>
+      </div>
+
+      <!-- 日報・経営ログ -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col h-[380px]">
+        <h2 class="text-sm font-bold text-slate-300 mb-2">📋 営業ログ</h2>
+        <div id="log-box" class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex-1 overflow-y-auto space-y-2 text-xs font-mono text-slate-300">
+          <div class="text-slate-500">開店準備を整えて「翌日へ進む」を押してください。</div>
+        </div>
       </div>
     </div>
 
-    <!-- スマホ用ジョイスティック -->
-    <div class="w-full flex justify-center py-2">
-      <div id="joystick-zone" class="w-28 h-28 bg-slate-900/80 border-2 border-slate-700/50 rounded-full relative touch-none flex items-center justify-center">
-        <div id="joystick-knob" class="w-10 h-10 bg-cyan-500/80 border-2 border-cyan-300 rounded-full absolute transition-transform ease-out duration-75 shadow-lg shadow-cyan-500/30"></div>
-      </div>
-    </div>
   </div>
 
   <script>
-    const PEER_PREFIX = "tong-bumper-v3-";
-    let peer = null, conn = null, isHost = false;
+    // ゲームデータ
+    let day = 1;
+    let money = 50000;
+    let reputation = 50;
+    let shelfCapacity = 100;
+    let staffCount = 0;
 
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    const weathers = [
+      { name: '☀️ 晴れ', factor: 1.2, itemBonus: 'ice' },
+      { name: '☁️ 曇り', factor: 1.0, itemBonus: null },
+      { name: '☔️ 雨', factor: 0.7, itemBonus: 'umbrella' },
+      { name: '❄️ 猛暑/大雨', factor: 0.5, itemBonus: 'hot' }
+    ];
+    let currentWeather = weathers[0];
 
-    const CENTER = 180, ARENA_RADIUS = 160, BALL_RADIUS = 14;
+    const items = [
+      { id: 'onigiri', name: 'おにぎり', icon: '🍙', cost: 80, price: 130, stock: 20, sales: 0, type: 'food' },
+      { id: 'bento', name: '幕の内弁当', icon: '🍱', cost: 300, price: 500, stock: 10, sales: 0, type: 'food' },
+      { id: 'drink', name: 'ペットボトル茶', icon: '🍵', cost: 60, price: 150, stock: 30, sales: 0, type: 'drink' },
+      { id: 'ice', name: 'アイスクリーム', icon: '🍦', cost: 90, price: 160, stock: 0, sales: 0, type: 'ice' },
+      { id: 'umbrella', name: 'ビニール傘', icon: '☂️', cost: 200, price: 600, stock: 0, sales: 0, type: 'umbrella' },
+      { id: 'hotCoffee', name: 'カウンターコーヒー', icon: '☕️', cost: 40, price: 120, stock: 15, sales: 0, type: 'hot' }
+    ];
 
-    let p1 = { x: 120, y: 180, vx: 0, vy: 0, color: '#38bdf8' };
-    let p2 = { x: 240, y: 180, vx: 0, vy: 0, color: '#f43f5e' };
-    let p1Score = 0, p2Score = 0;
-    let isRoundActive = false;
+    // UI初期化
+    function initUI() {
+      const list = document.getElementById('item-list');
+      list.innerHTML = '';
 
-    let cheatRainBalls = [];
-    let cheatActive = false;
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2';
+        div.innerHTML = `
+          <div class="flex items-center space-x-3 w-36">
+            <span class="text-2xl">${item.icon}</span>
+            <div>
+              <div class="text-xs font-bold text-slate-200">${item.name}</div>
+              <div class="text-[10px] text-slate-400">原価: ¥${item.cost}</div>
+            </div>
+          </div>
 
-    const myInputs = { up: false, down: false, left: false, right: false };
-    let guestInputs = { up: false, down: false, left: false, right: false };
+          <div class="flex items-center space-x-2">
+            <span class="text-[10px] text-slate-500">販売価格:</span>
+            <input type="number" value="${item.price}" onchange="updatePrice('${item.id}', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-emerald-400 font-mono font-bold text-center">
+            <span class="text-xs text-slate-400">円</span>
+          </div>
 
-    // --- キーボード入力 ---
-    window.addEventListener('keydown', e => handleKey(e, true));
-    window.addEventListener('keyup', e => handleKey(e, false));
+          <div class="flex items-center space-x-2">
+            <span class="text-[10px] text-slate-500">在庫:</span>
+            <span id="stock-${item.id}" class="text-xs font-bold font-mono text-cyan-400 w-8 text-right">${item.stock}</span>
+          </div>
 
-    function handleKey(e, state) {
-      if (['ArrowUp', 'KeyW'].includes(e.code)) myInputs.up = state;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) myInputs.down = state;
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) myInputs.left = state;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) myInputs.right = state;
-
-      sendInputUpdate();
-    }
-
-    // --- ジョイスティック ---
-    const stickZone = document.getElementById('joystick-zone');
-    const stickKnob = document.getElementById('joystick-knob');
-    let stickActive = false;
-    let stickCenter = { x: 0, y: 0 };
-
-    stickZone.addEventListener('touchstart', e => {
-      e.preventDefault();
-      stickActive = true;
-      const rect = stickZone.getBoundingClientRect();
-      stickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-      updateStick(e.touches[0]);
-    });
-
-    stickZone.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (stickActive) updateStick(e.touches[0]);
-    });
-
-    const resetStick = () => {
-      stickActive = false;
-      stickKnob.style.transform = `translate(0px, 0px)`;
-      myInputs.up = myInputs.down = myInputs.left = myInputs.right = false;
-      sendInputUpdate();
-    };
-
-    stickZone.addEventListener('touchend', resetStick);
-    stickZone.addEventListener('touchcancel', resetStick);
-
-    function updateStick(touch) {
-      const dx = touch.clientX - stickCenter.x;
-      const dy = touch.clientY - stickCenter.y;
-      const dist = Math.hypot(dx, dy);
-      const maxRadius = 35;
-
-      const angle = Math.atan2(dy, dx);
-      const clampedDist = Math.min(dist, maxRadius);
-      const knobX = Math.cos(angle) * clampedDist;
-      const knobY = Math.sin(angle) * clampedDist;
-
-      stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-
-      const threshold = 10;
-      myInputs.left = dx < -threshold;
-      myInputs.right = dx > threshold;
-      myInputs.up = dy < -threshold;
-      myInputs.down = dy > threshold;
-
-      sendInputUpdate();
-    }
-
-    function sendInputUpdate() {
-      if (!isHost && conn && conn.open) {
-        conn.send({ type: 'INPUT', inputs: myInputs });
-      }
-    }
-
-    // --- チートトリガー（FIRST TO 3 を 3回タップ） ---
-    let cheatTapCount = 0;
-    let cheatTapTimer = null;
-
-    function handleCheatTap() {
-      cheatTapCount++;
-      
-      clearTimeout(cheatTapTimer);
-      // 2秒間タップ間隔が空いたらカウントリセット
-      cheatTapTimer = setTimeout(() => {
-        cheatTapCount = 0;
-      }, 2000);
-
-      if (cheatTapCount >= 3) {
-        cheatTapCount = 0;
-        triggerCheatMode();
-      }
-    }
-
-    function triggerCheatMode() {
-      if (cheatActive) return;
-      cheatActive = true;
-      document.getElementById('body-root').classList.add('cheat-active');
-      
-      const attackerColor = isHost ? '#38bdf8' : '#f43f5e';
-      
-      if (conn && conn.open) {
-        conn.send({ type: 'CHEAT_TRIGGER', attacker: isHost ? 'p1' : 'p2' });
-      }
-      
-      spawnCheatRain(isHost ? 'p1' : 'p2', attackerColor);
-    }
-
-    function spawnCheatRain(attacker, color) {
-      showMessage("🚨 CHEAT ACTIVATED 🚨");
-      
-      for (let i = 0; i < 30; i++) {
-        cheatRainBalls.push({
-          x: CENTER + (Math.random() - 0.5) * 150,
-          y: -40 - (i * 30),
-          vx: (Math.random() - 0.5) * 3,
-          vy: 10 + Math.random() * 6,
-          radius: 20,
-          color: color,
-          attacker: attacker
-        });
-      }
-    }
-
-    // --- P2P 接続 ---
-    function createRoom() {
-      const code = Math.floor(1000 + Math.random() * 9000).toString();
-      document.getElementById('my-code-display').innerText = code;
-      document.getElementById('host-info').classList.remove('hidden');
-      document.getElementById('btn-create').disabled = true;
-
-      isHost = true;
-      peer = new Peer(PEER_PREFIX + code);
-
-      peer.on('connection', c => {
-        conn = c;
-        setupConnection();
+          <div class="flex space-x-1">
+            <button onclick="buyStock('${item.id}', 10)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded">+10仕入</button>
+            <button onclick="buyStock('${item.id}', 30)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded">+30仕入</button>
+          </div>
+        `;
+        list.appendChild(div);
       });
-      peer.on('error', err => { if(err.type === 'unavailable-id') createRoom(); });
+
+      updateHeader();
     }
 
-    function joinRoom() {
-      const code = document.getElementById('join-code-input').value.trim();
-      if (code.length !== 4) return alert('4桁の数字を入力してください');
+    function updateHeader() {
+      document.getElementById('day-display').innerText = `第 ${day} 日目`;
+      document.getElementById('money-display').innerText = `¥${money.toLocaleString()}`;
+      document.getElementById('weather-display').innerText = currentWeather.name;
+      document.getElementById('reputation-display').innerText = `⭐️ ${reputation}`;
+      document.getElementById('staff-count').innerText = staffCount;
 
-      isHost = false;
-      peer = new Peer();
-
-      peer.on('open', () => {
-        conn = peer.connect(PEER_PREFIX + code);
-        setupConnection();
-      });
-      peer.on('error', () => alert('部屋が見つかりませんでした'));
+      const totalStock = items.reduce((sum, item) => sum + item.stock, 0);
+      document.getElementById('shelf-usage').innerText = totalStock;
+      document.getElementById('shelf-capacity').innerText = shelfCapacity;
     }
 
-    function setupConnection() {
-      conn.on('open', () => {
-        document.getElementById('lobby').classList.add('hidden');
-        document.getElementById('game-container').classList.remove('hidden');
-        document.getElementById('game-container').classList.add('flex');
+    function updatePrice(id, val) {
+      const item = items.find(i => i.id === id);
+      if (item) item.price = Math.max(0, parseInt(val) || 0);
+    }
 
-        if (isHost) {
-          startNewRound("MATCH START!");
-          gameLoopHost();
+    function buyStock(id, count) {
+      const item = items.find(i => i.id === id);
+      const totalStock = items.reduce((sum, i) => sum + i.stock, 0);
+
+      if (totalStock + count > shelfCapacity) {
+        alert("陳列棚の容量オーバーです！棚を拡張するか在庫を減らしてください。");
+        return;
+      }
+
+      const cost = item.cost * count;
+      if (money < cost) {
+        alert("資金が不足しています！");
+        return;
+      }
+
+      money -= cost;
+      item.stock += count;
+      document.getElementById(`stock-${item.id}`).innerText = item.stock;
+      updateHeader();
+    }
+
+    function upgradeShelf() {
+      if (money < 20000) return alert("資金不足です（要 ¥20,000）");
+      money -= 20000;
+      shelfCapacity += 50;
+      updateHeader();
+      log("🛠 店舗を拡張して陳列容量を増やしました！", "text-cyan-400");
+    }
+
+    function hireStaff() {
+      if (money < 5000) return alert("資金不足です（要 ¥5,000）");
+      money -= 5000;
+      staffCount++;
+      updateHeader();
+      log("👔 新しいアルバイトを採用しました！（人件費が発生します）", "text-amber-400");
+    }
+
+    // 日進進行ロジック
+    function nextDay() {
+      // 1. 人件費支払い
+      const wages = staffCount * 5000;
+      money -= wages;
+
+      // 2. 営業計算
+      let dayRevenue = 0;
+      let dayProfit = 0;
+      let logMessages = [];
+
+      items.forEach(item => {
+        if (item.stock <= 0) return;
+
+        // 需要計算（価格感応度 + 天候補正）
+        const idealPrice = item.cost * 1.8;
+        let demandFactor = Math.max(0.1, 1.5 - (item.price / idealPrice));
+
+        if (currentWeather.itemBonus === item.type) {
+          demandFactor *= 2.0; // 特需
+        }
+
+        let baseVisitors = Math.floor((reputation * 0.8) + Math.random() * 20);
+        let potentialSales = Math.floor(baseVisitors * demandFactor * currentWeather.factor);
+        let actualSales = Math.min(item.stock, potentialSales);
+
+        if (actualSales > 0) {
+          item.stock -= actualSales;
+          const revenue = actualSales * item.price;
+          dayRevenue += revenue;
+          logMessages.push(`${item.icon} ${item.name}: ${actualSales}個販売 (+¥${revenue.toLocaleString()})`);
         }
       });
 
-      conn.on('data', data => {
-        if (isHost) {
-          if (data.type === 'INPUT') guestInputs = data.inputs;
+      money += dayRevenue;
+
+      // 3. ランダムイベント発生
+      let eventText = "";
+      const rand = Math.random();
+      if (rand < 0.15) {
+        // 万引き/トラブル
+        if (staffCount === 0) {
+          const loss = Math.floor(money * 0.05);
+          money -= loss;
+          reputation = Math.max(0, reputation - 5);
+          eventText = `⚠️ 万引き被害！ワンオペだったため抑止できず ¥${loss.toLocaleString()} の損害。`;
         } else {
-          if (data.type === 'STATE') {
-            p1 = data.p1; p2 = data.p2;
-            p1Score = data.p1Score; p2Score = data.p2Score;
-            cheatRainBalls = data.cheatRainBalls || [];
-            updateUI();
-            render();
-          } else if (data.type === 'MSG') {
-            showMessage(data.msg);
-          }
+          eventText = `🛡 万引き未遂！アルバイトの目配りにより未然に防ぎました。`;
         }
-
-        if (data.type === 'CHEAT_TRIGGER') {
-          const color = data.attacker === 'p1' ? '#38bdf8' : '#f43f5e';
-          document.getElementById('body-root').classList.add('cheat-active');
-          spawnCheatRain(data.attacker, color);
-        }
-      });
-    }
-
-    // --- 物理演算 (ホスト) ---
-    function updatePhysics(p, inputs) {
-      const accel = 0.5, friction = 0.95;
-      if (inputs.up) p.vy -= accel;
-      if (inputs.down) p.vy += accel;
-      if (inputs.left) p.vx -= accel;
-      if (inputs.right) p.vx += accel;
-
-      p.vx *= friction; p.vy *= friction;
-      p.x += p.vx; p.y += p.vy;
-    }
-
-    function gameLoopHost() {
-      if (isRoundActive) {
-        updatePhysics(p1, myInputs);
-        updatePhysics(p2, guestInputs);
-
-        const dx = p2.x - p1.x, dy = p2.y - p1.y, dist = Math.hypot(dx, dy);
-        if (dist < BALL_RADIUS * 2) {
-          const overlap = (BALL_RADIUS * 2) - dist;
-          const nx = dx / (dist || 1), ny = dy / (dist || 1);
-          p1.x -= nx * overlap * 0.5; p1.y -= ny * overlap * 0.5;
-          p2.x += nx * overlap * 0.5; p2.y += ny * overlap * 0.5;
-          const kx = p1.vx - p2.vx, ky = p1.vy - p2.vy;
-          const p = 2 * (nx * kx + ny * ky) / 2;
-          p1.vx -= p * nx * 1.5; p1.vy -= p * ny * 1.5;
-          p2.vx += p * nx * 1.5; p2.vy += p * ny * 1.5;
-        }
-
-        for (let i = cheatRainBalls.length - 1; i >= 0; i--) {
-          let b = cheatRainBalls[i];
-          b.y += b.vy; b.x += b.vx;
-
-          let target = b.attacker === 'p1' ? p2 : p1;
-          let tDx = target.x - b.x, tDy = target.y - b.y, tDist = Math.hypot(tDx, tDy);
-
-          if (tDist < b.radius + BALL_RADIUS) {
-            target.vx += (tDx / (tDist || 1)) * 20;
-            target.vy += (tDy / (tDist || 1)) * 20;
-          }
-
-          if (b.y > canvas.height + 100) cheatRainBalls.splice(i, 1);
-        }
-
-        const d1 = Math.hypot(p1.x - CENTER, p1.y - CENTER);
-        const d2 = Math.hypot(p2.x - CENTER, p2.y - CENTER);
-
-        if (d1 > ARENA_RADIUS) {
-          p2Score++; handlePointScored("P2 (赤) のポイント！");
-        } else if (d2 > ARENA_RADIUS) {
-          p1Score++; handlePointScored("P1 (青) のポイント！");
-        }
+      } else if (rand > 0.85) {
+        // SNSでバズる
+        reputation += 10;
+        eventText = `✨ インフルエンサーに紹介されて評判が上がりました！（評判+10）`;
       }
 
-      updateUI();
-      render();
+      // 4. 天候更新
+      currentWeather = weathers[Math.floor(Math.random() * weathers.length)];
 
-      if (conn && conn.open) {
-        conn.send({ type: 'STATE', p1, p2, p1Score, p2Score, cheatRainBalls });
-      }
+      // 5. 画面更新 & ログ出力
+      day++;
+      initUI();
 
-      requestAnimationFrame(gameLoopHost);
-    }
+      // ログ書き出し
+      log(`--- 【第 ${day - 1} 日目の営業結果】 ---`, "text-slate-400 font-bold");
+      if (wages > 0) log(`💸 バイト人件費: -¥${wages.toLocaleString()}`, "text-rose-400");
+      log(`💰 本日の総売上: +¥${dayRevenue.toLocaleString()}`, "text-emerald-400 font-bold");
+      if (eventText) log(eventText, "text-amber-300");
 
-    function handlePointScored(msg) {
-      isRoundActive = false;
-      cheatActive = false;
-      document.getElementById('body-root').classList.remove('cheat-active');
+      // ニュース更新
+      let news = "特になし。平常通りの営業です。";
+      if (currentWeather.itemBonus === 'ice') news = "🔥 明日は猛暑予報！冷たいアイスが爆売れの予感？";
+      if (currentWeather.itemBonus === 'umbrella') news = "☔️ 明日は大雨予報！ビニール傘の在庫は大丈夫？";
+      document.getElementById('news-box').innerText = news;
 
-      if (p1Score >= 3 || p2Score >= 3) {
-        const winnerMsg = p1Score >= 3 ? "P1 (青) の勝利！🏆" : "P2 (赤) の勝利！🏆";
-        sendMsg(winnerMsg);
-        setTimeout(() => { p1Score = 0; p2Score = 0; startNewRound("NEW MATCH"); }, 3000);
-      } else {
-        sendMsg(msg);
-        setTimeout(() => startNewRound("ROUND START"), 2000);
+      // 破産判定
+      if (money < 0) {
+        alert("💸 資金が底をつき、店舗は倒産しました... ゲームオーバー！");
+        location.reload();
       }
     }
 
-    function startNewRound(msg) {
-      p1.x = 120; p1.y = 180; p1.vx = 0; p1.vy = 0;
-      p2.x = 240; p2.y = 180; p2.vx = 0; p2.vy = 0;
-      cheatRainBalls = [];
-      sendMsg(msg);
-      setTimeout(() => { isRoundActive = true; }, 1000);
+    function log(msg, colorClass = "text-slate-300") {
+      const box = document.getElementById('log-box');
+      const div = document.createElement('div');
+      div.className = `log-entry ${colorClass}`;
+      div.innerText = msg;
+      box.insertBefore(div, box.firstChild);
     }
 
-    function sendMsg(msg) {
-      showMessage(msg);
-      if (conn && conn.open) conn.send({ type: 'MSG', msg });
-    }
-
-    function showMessage(msg) {
-      const overlay = document.getElementById('status-overlay');
-      const text = document.getElementById('status-message');
-      text.innerText = msg;
-      overlay.classList.remove('hidden');
-      setTimeout(() => overlay.classList.add('hidden'), 1500);
-    }
-
-    function updateUI() {
-      document.getElementById('p1-score').innerText = p1Score;
-      document.getElementById('p2-score').innerText = p2Score;
-    }
-
-    function render() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.beginPath();
-      ctx.arc(CENTER, CENTER, ARENA_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = '#0f172a';
-      ctx.fill();
-      ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      cheatRainBalls.forEach(b => {
-        ctx.save();
-        ctx.shadowColor = b.color;
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fillStyle = b.color;
-        ctx.fill();
-        ctx.restore();
-      });
-
-      drawBall(p1.x, p1.y, '#38bdf8', '#0284c7');
-      drawBall(p2.x, p2.y, '#f43f5e', '#be123c');
-    }
-
-    function drawBall(x, y, mainColor, glowColor) {
-      ctx.save();
-      ctx.shadowColor = glowColor;
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(x, y, BALL_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = mainColor;
-      ctx.fill();
-      ctx.restore();
-    }
+    // 初期化実行
+    initUI();
   </script>
 </body>
 </html>
