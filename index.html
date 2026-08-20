@@ -3,295 +3,404 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mob Rush - 広告風大群バトル</title>
+  <title>NEON BUMPER - Cheat Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0f172a;
-      color: #fff;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-      user-select: none;
-    }
-    canvas {
-      background: #1e293b;
-      border: 3px solid #38bdf8;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      touch-action: none;
-    }
-    .info {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #94a3b8;
+    body { user-select: none; touch-action: manipulation; }
+    .cheat-active { animation: pulse-red 0.5s infinite alternate; }
+    @keyframes pulse-red {
+      from { box-shadow: inset 0 0 20px #ef4444; }
+      to { box-shadow: inset 0 0 80px #dc2626; }
     }
   </style>
 </head>
-<body>
+<body id="body-root" class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
 
-  <canvas id="gameCanvas" width="360" height="600"></canvas>
-  <div class="info">左右にドラッグして「倍率ゲート」を通ろう！</div>
+  <!-- ロビー画面 -->
+  <div id="lobby" class="w-full max-w-md bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center space-y-6 shadow-2xl">
+    <div>
+      <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text text-transparent">
+        NEON BUMPER
+      </h1>
+      <p class="text-xs text-slate-400 mt-1">4桁コードで簡単マッチング</p>
+    </div>
+
+    <!-- 部屋作成（ホスト） -->
+    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+      <div class="text-xs font-bold text-slate-300">① 部屋を作って4桁コードを教える</div>
+      <button id="btn-create" onclick="createRoom()" class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black rounded-xl text-sm transition">
+        部屋を作る 🚀
+      </button>
+
+      <div id="host-info" class="hidden space-y-2 pt-2">
+        <div class="text-[10px] text-slate-400">あなたの対戦コード:</div>
+        <div id="my-code-display" class="text-3xl font-black font-mono tracking-widest text-cyan-400 py-1">----</div>
+        <div class="text-[11px] text-amber-400 animate-pulse font-bold">相手の接続を待っています...</div>
+      </div>
+    </div>
+
+    <div class="text-xs text-slate-600 font-bold">- OR -</div>
+
+    <!-- 部屋参加（ゲスト） -->
+    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+      <div class="text-xs font-bold text-slate-300">② 4桁コードを入力して参加する</div>
+      <input id="join-code-input" type="number" maxlength="4" placeholder="4桁の数字" class="w-full bg-slate-900 border border-slate-700 text-lg font-mono text-center px-3 py-2 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 tracking-widest">
+      <button id="btn-join" onclick="joinRoom()" class="w-full py-3 bg-pink-500 hover:bg-pink-400 text-slate-950 font-black rounded-xl text-sm transition">
+        対戦に参加する ⚔️
+      </button>
+    </div>
+  </div>
+
+  <!-- 対戦画面 -->
+  <div id="game-container" class="hidden flex-col items-center space-y-4">
+    <!-- スコアボード -->
+    <div class="flex items-center justify-between w-full max-w-lg px-6 py-3 bg-slate-900 border border-slate-800 rounded-2xl">
+      <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 rounded-full bg-cyan-400 shadow-lg shadow-cyan-500/50"></span>
+        <span class="text-sm font-bold text-cyan-400">P1 (青)</span>
+        <span id="p1-score" class="text-xl font-black text-white font-mono ml-2">0</span>
+      </div>
+      <div class="text-xs text-slate-500 font-bold">FIRST TO 3</div>
+      <div class="flex items-center space-x-2">
+        <span id="p2-score" class="text-xl font-black text-white font-mono mr-2">0</span>
+        <span class="text-sm font-bold text-pink-400">P2 (赤)</span>
+        <span class="w-3 h-3 rounded-full bg-pink-400 shadow-lg shadow-pink-500/50"></span>
+      </div>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div class="relative">
+      <canvas id="gameCanvas" width="500" height="500" class="bg-slate-900 border-2 border-slate-800 rounded-full shadow-2xl cursor-crosshair"></canvas>
+      <div id="status-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-950/80 rounded-full hidden">
+        <span id="status-message" class="text-2xl font-black text-cyan-400 animate-bounce">READY</span>
+      </div>
+    </div>
+
+    <div class="text-xs text-slate-400 font-medium">
+      【操作】 <b>WASD</b> または <b>矢印キー</b> で移動
+    </div>
+  </div>
 
   <script>
+    const PEER_PREFIX = "tong-bumper-v1-";
+    let peer = null, conn = null, isHost = false;
+
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    let isPlaying = false;
-    let score = 0;
-    let playerX = canvas.width / 2;
-    let isDragging = false;
+    const CENTER = 250, ARENA_RADIUS = 220, BALL_RADIUS = 18;
 
-    // 自軍プレイヤーの大群データ
-    let mobList = [];
-    const MOB_RADIUS = 5;
+    let p1 = { x: 170, y: 250, vx: 0, vy: 0, color: '#38bdf8' };
+    let p2 = { x: 330, y: 250, vx: 0, vy: 0, color: '#f43f5e' };
+    let p1Score = 0, p2Score = 0;
+    let isRoundActive = false;
 
-    // 障害物・ゲート・敵軍のデータ
-    let gates = [];
-    let enemies = [];
-    let speed = 3;
-    let frame = 0;
+    // チート・無敵ボール関係
+    let cheatRainBalls = [];
+    let cheatActive = false;
 
-    // タッチ/マウス操作
-    function handleMove(e) {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      playerX = (clientX - rect.left) * (canvas.width / rect.width);
-      if (playerX < 30) playerX = 30;
-      if (playerX > canvas.width - 30) playerX = canvas.width - 30;
+    const myInputs = { up: false, down: false, left: false, right: false };
+    let guestInputs = { up: false, down: false, left: false, right: false };
+
+    // --- キー入力 ---
+    window.addEventListener('keydown', e => handleKey(e, true));
+    window.addEventListener('keyup', e => handleKey(e, false));
+
+    function handleKey(e, state) {
+      if (['ArrowUp', 'KeyW'].includes(e.code)) myInputs.up = state;
+      if (['ArrowDown', 'KeyS'].includes(e.code)) myInputs.down = state;
+      if (['ArrowLeft', 'KeyA'].includes(e.code)) myInputs.left = state;
+      if (['ArrowRight', 'KeyD'].includes(e.code)) myInputs.right = state;
+
+      if (!isHost && conn && conn.open) {
+        conn.send({ type: 'INPUT', inputs: myInputs });
+      }
     }
 
-    canvas.addEventListener('mousedown', (e) => { isDragging = true; handleMove(e); if(!isPlaying) startGame(); });
-    canvas.addEventListener('mousemove', (e) => { if (isDragging) handleMove(e); });
-    window.addEventListener('mouseup', () => isDragging = false);
+    // --- SOSタップ検知機能（画面外タップ） ---
+    let tapHistory = [];
+    const SOS_PATTERN = [0, 0, 0, 1, 1, 1, 0, 0, 0]; // 0: 短 (＜250ms), 1: 長 (≧250ms)
 
-    canvas.addEventListener('touchstart', (e) => { isDragging = true; handleMove(e); if(!isPlaying) startGame(); });
-    canvas.addEventListener('touchmove', (e) => { if (isDragging) handleMove(e); });
-    window.addEventListener('touchend', () => isDragging = false);
+    window.addEventListener('pointerdown', e => {
+      // キャンバス内での操作は除外（画面外限定）
+      if (e.target === canvas) return;
+      window.lastTapStart = Date.now();
+    });
 
-    function startGame() {
-      isPlaying = true;
-      score = 0;
-      speed = 3.5;
-      frame = 0;
-      playerX = canvas.width / 2;
-      mobList = [{ x: playerX, y: 500 }];
-      gates = [];
-      enemies = [];
-      loop();
+    window.addEventListener('pointerup', e => {
+      if (e.target === canvas || !window.lastTapStart) return;
+      const duration = Date.now() - window.lastTapStart;
+      const type = duration > 250 ? 1 : 0;
+      const now = Date.now();
+
+      tapHistory.push({ type, time: now });
+
+      // 3秒以内のタップ履歴のみ保持
+      tapHistory = tapHistory.filter(t => now - t.time <= 3000);
+
+      // 直近9回のタップがSOSパターンに一致するか判定
+      if (tapHistory.length >= 9) {
+        const recent = tapHistory.slice(-9).map(t => t.type);
+        if (recent.every((val, idx) => val === SOS_PATTERN[idx])) {
+          triggerCheatMode();
+          tapHistory = [];
+        }
+      }
+    });
+
+    function triggerCheatMode() {
+      if (cheatActive) return;
+      cheatActive = true;
+      document.getElementById('body-root').classList.add('cheat-active');
+      
+      const attackerColor = isHost ? '#38bdf8' : '#f43f5e';
+      
+      if (conn && conn.open) {
+        conn.send({ type: 'CHEAT_SOS', attacker: isHost ? 'p1' : 'p2' });
+      }
+      
+      spawnCheatRain(isHost ? 'p1' : 'p2', attackerColor);
     }
 
-    // 大群の人数を増減する処理
-    function adjustMobCount(targetCount) {
-      targetCount = Math.min(Math.max(1, targetCount), 200); // 最大200人制限
-      while (mobList.length < targetCount) {
-        // 集団の近くに新メンバーをポップ
-        const leader = mobList[0] || { x: playerX, y: 500 };
-        const angle = Math.random() * Math.PI * 2;
-        const dist = Math.random() * (Math.sqrt(mobList.length) * 4);
-        mobList.push({
-          x: leader.x + Math.cos(angle) * dist,
-          y: leader.y + Math.sin(angle) * dist
+    function spawnCheatRain(attacker, color) {
+      showMessage("🚨 CHEAT ACTIVATED 🚨");
+      
+      // 30個の巨大無敵ボールを生成
+      for (let i = 0; i < 30; i++) {
+        cheatRainBalls.push({
+          x: CENTER + (Math.random() - 0.5) * 200,
+          y: -50 - (i * 40),
+          vx: (Math.random() - 0.5) * 4,
+          vy: 12 + Math.random() * 8,
+          radius: 25,
+          color: color,
+          attacker: attacker
         });
       }
-      while (mobList.length > targetCount) {
-        mobList.pop();
-      }
     }
 
-    // ゲート生成（「+10」や「×2」など）
-    function spawnGate() {
-      const isMultiplier = Math.random() > 0.4;
-      const val1 = isMultiplier ? Math.floor(Math.random() * 2) + 2 : Math.floor(Math.random() * 15) + 5;
-      const val2 = isMultiplier ? Math.floor(Math.random() * 2) + 2 : Math.floor(Math.random() * 10) + 1;
+    // --- P2P 4桁接続 ---
+    function createRoom() {
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      document.getElementById('my-code-display').innerText = code;
+      document.getElementById('host-info').classList.remove('hidden');
+      document.getElementById('btn-create').disabled = true;
 
-      gates.push({
-        y: -60,
-        left: { type: isMultiplier ? 'mul' : 'add', val: val1 },
-        right: { type: 'add', val: val2 }
+      isHost = true;
+      peer = new Peer(PEER_PREFIX + code);
+
+      peer.on('connection', c => {
+        conn = c;
+        setupConnection();
+      });
+      peer.on('error', err => {
+        if(err.type === 'unavailable-id') createRoom(); // 重複時は再生成
       });
     }
 
-    // 敵の大群生成（押し寄せる壁）
-    function spawnEnemyCluster() {
-      const enemyCount = Math.floor(mobList.length * (0.8 + Math.random() * 0.6)) + 5;
-      const clusterX = Math.random() * (canvas.width - 120) + 60;
-      let cluster = [];
-      
-      for (let i = 0; i < enemyCount; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = Math.random() * (Math.sqrt(enemyCount) * 4);
-        cluster.push({
-          x: clusterX + Math.cos(angle) * dist,
-          y: -80 + Math.sin(angle) * dist
-        });
-      }
-      enemies.push(cluster);
+    function joinRoom() {
+      const code = document.getElementById('join-code-input').value.trim();
+      if (code.length !== 4) return alert('4桁の数字を入力してください');
+
+      isHost = false;
+      peer = new Peer();
+
+      peer.on('open', () => {
+        conn = peer.connect(PEER_PREFIX + code);
+        setupConnection();
+      });
+      peer.on('error', () => alert('部屋が見つかりませんでした'));
     }
 
-    function loop() {
-      if (!isPlaying) return;
-      frame++;
+    function setupConnection() {
+      conn.on('open', () => {
+        document.getElementById('lobby').classList.add('hidden');
+        document.getElementById('game-container').classList.remove('hidden');
+        document.getElementById('game-container').classList.add('flex');
+
+        if (isHost) {
+          startNewRound("MATCH START!");
+          gameLoopHost();
+        }
+      });
+
+      conn.on('data', data => {
+        if (isHost) {
+          if (data.type === 'INPUT') guestInputs = data.inputs;
+        } else {
+          if (data.type === 'STATE') {
+            p1 = data.p1; p2 = data.p2;
+            p1Score = data.p1Score; p2Score = data.p2Score;
+            cheatRainBalls = data.cheatRainBalls || [];
+            updateUI();
+            render();
+          } else if (data.type === 'MSG') {
+            showMessage(data.msg);
+          }
+        }
+
+        if (data.type === 'CHEAT_SOS') {
+          const color = data.attacker === 'p1' ? '#38bdf8' : '#f43f5e';
+          document.getElementById('body-root').classList.add('cheat-active');
+          spawnCheatRain(data.attacker, color);
+        }
+      });
+    }
+
+    // --- 物理処理（ホスト統括） ---
+    function updatePhysics(p, inputs) {
+      const accel = 0.6, friction = 0.96;
+      if (inputs.up) p.vy -= accel;
+      if (inputs.down) p.vy += accel;
+      if (inputs.left) p.vx -= accel;
+      if (inputs.right) p.vx += accel;
+
+      p.vx *= friction; p.vy *= friction;
+      p.x += p.vx; p.y += p.vy;
+    }
+
+    function gameLoopHost() {
+      if (isRoundActive) {
+        updatePhysics(p1, myInputs);
+        updatePhysics(p2, guestInputs);
+
+        // プレイヤー同士の衝突
+        const dx = p2.x - p1.x, dy = p2.y - p1.y, dist = Math.hypot(dx, dy);
+        if (dist < BALL_RADIUS * 2) {
+          const overlap = (BALL_RADIUS * 2) - dist;
+          const nx = dx / (dist || 1), ny = dy / (dist || 1);
+          p1.x -= nx * overlap * 0.5; p1.y -= ny * overlap * 0.5;
+          p2.x += nx * overlap * 0.5; p2.y += ny * overlap * 0.5;
+          const kx = p1.vx - p2.vx, ky = p1.vy - p2.vy;
+          const p = 2 * (nx * kx + ny * ky) / 2;
+          p1.vx -= p * nx * 1.5; p1.vy -= p * ny * 1.5;
+          p2.vx += p * nx * 1.5; p2.vy += p * ny * 1.5;
+        }
+
+        // 無敵降下ボールの更新＆ターゲット押しつぶし
+        for (let i = cheatRainBalls.length - 1; i >= 0; i--) {
+          let b = cheatRainBalls[i];
+          b.y += b.vy; b.x += b.vx;
+
+          let target = b.attacker === 'p1' ? p2 : p1;
+          let tDx = target.x - b.x, tDy = target.y - b.y, tDist = Math.hypot(tDx, tDy);
+
+          // 超強力な吹き飛ばし衝撃波
+          if (tDist < b.radius + BALL_RADIUS) {
+            target.vx += (tDx / (tDist || 1)) * 25;
+            target.vy += (tDy / (tDist || 1)) * 25;
+          }
+
+          if (b.y > canvas.height + 100) cheatRainBalls.splice(i, 1);
+        }
+
+        // リングアウト判定
+        const d1 = Math.hypot(p1.x - CENTER, p1.y - CENTER);
+        const d2 = Math.hypot(p2.x - CENTER, p2.y - CENTER);
+
+        if (d1 > ARENA_RADIUS) {
+          p2Score++; handlePointScored("P2 (赤) のポイント！");
+        } else if (d2 > ARENA_RADIUS) {
+          p1Score++; handlePointScored("P1 (青) のポイント！");
+        }
+      }
+
+      updateUI();
+      render();
+
+      if (conn && conn.open) {
+        conn.send({
+          type: 'STATE',
+          p1, p2, p1Score, p2Score, cheatRainBalls
+        });
+      }
+
+      requestAnimationFrame(gameLoopHost);
+    }
+
+    function handlePointScored(msg) {
+      isRoundActive = false;
+      cheatActive = false;
+      document.getElementById('body-root').classList.remove('cheat-active');
+
+      if (p1Score >= 3 || p2Score >= 3) {
+        const winnerMsg = p1Score >= 3 ? "P1 (青) の勝利！🏆" : "P2 (赤) の勝利！🏆";
+        sendMsg(winnerMsg);
+        setTimeout(() => { p1Score = 0; p2Score = 0; startNewRound("NEW MATCH"); }, 3000);
+      } else {
+        sendMsg(msg);
+        setTimeout(() => startNewRound("ROUND START"), 2000);
+      }
+    }
+
+    function startNewRound(msg) {
+      p1.x = 170; p1.y = 250; p1.vx = 0; p1.vy = 0;
+      p2.x = 330; p2.y = 250; p2.vx = 0; p2.vy = 0;
+      cheatRainBalls = [];
+      sendMsg(msg);
+      setTimeout(() => { isRoundActive = true; }, 1000);
+    }
+
+    function sendMsg(msg) {
+      showMessage(msg);
+      if (conn && conn.open) conn.send({ type: 'MSG', msg });
+    }
+
+    function showMessage(msg) {
+      const overlay = document.getElementById('status-overlay');
+      const text = document.getElementById('status-message');
+      text.innerText = msg;
+      overlay.classList.remove('hidden');
+      setTimeout(() => overlay.classList.add('hidden'), 1500);
+    }
+
+    function updateUI() {
+      document.getElementById('p1-score').innerText = p1Score;
+      document.getElementById('p2-score').innerText = p2Score;
+    }
+
+    function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // --- 1. プレイヤー（青い大群）の移動演算 ---
-      const leaderY = 500;
-      mobList.forEach((m, idx) => {
-        if (idx === 0) {
-          m.x += (playerX - m.x) * 0.2;
-          m.y = leaderY;
-        } else {
-          // リーダーを追従して固まる物理挙動
-          const target = mobList[0];
-          const dx = target.x - m.x;
-          const dy = target.y - m.y;
-          m.x += dx * 0.08 + (Math.random() - 0.5) * 2;
-          m.y += dy * 0.08 + (Math.random() - 0.5) * 2;
-        }
-
-        // 描画（自軍青色）
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, MOB_RADIUS, 0, Math.PI * 2);
-        ctx.fillStyle = '#38bdf8';
-        ctx.fill();
-      });
-
-      // 人数カウンター描画
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 18px sans-serif';
-      ctx.textAlign = 'center';
-      if (mobList.length > 0) {
-        ctx.fillText(`👥 ${mobList.length}`, mobList[0].x, mobList[0].y - 25);
-      }
-
-      // --- 2. ゲートの移動と判定 ---
-      if (frame % 120 === 0) spawnGate();
-
-      for (let i = gates.length - 1; i >= 0; i--) {
-        let g = gates[i];
-        g.y += speed;
-
-        // 左ゲート
-        ctx.fillStyle = 'rgba(14, 165, 233, 0.7)';
-        ctx.fillRect(10, g.y, canvas.width / 2 - 15, 40);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.fillText(g.left.type === 'mul' ? `×${g.left.val}` : `+${g.left.val}`, canvas.width / 4, g.y + 25);
-
-        // 右ゲート
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
-        ctx.fillRect(canvas.width / 2 + 5, g.y, canvas.width / 2 - 15, 40);
-        ctx.fillText(g.right.type === 'mul' ? `×${g.right.val}` : `+${g.right.val}`, (canvas.width / 4) * 3, g.y + 25);
-
-        // 接触判定
-        if (g.y > leaderY - 20 && g.y < leaderY + 20) {
-          const chosenGate = playerX < canvas.width / 2 ? g.left : g.right;
-          let newCount = mobList.length;
-          if (chosenGate.type === 'mul') newCount *= chosenGate.val;
-          else newCount += chosenGate.val;
-
-          adjustMobCount(newCount);
-          gates.splice(i, 1);
-        } else if (g.y > canvas.height) {
-          gates.splice(i, 1);
-        }
-      }
-
-      // --- 3. 敵軍（赤色）の移動とぶつかり合い（バトル） ---
-      if (frame % 180 === 0) spawnEnemyCluster();
-
-      for (let i = enemies.length - 1; i >= 0; i--) {
-        let cluster = enemies[i];
-        let clusterY = 0;
-
-        cluster.forEach(e => {
-          e.y += speed * 0.8;
-          clusterY = e.y;
-
-          // 赤い敵描画
-          ctx.beginPath();
-          ctx.arc(e.x, e.y, MOB_RADIUS, 0, Math.PI * 2);
-          ctx.fillStyle = '#ef4444';
-          ctx.fill();
-        });
-
-        // 敵人数表示
-        ctx.fillStyle = '#fca5a5';
-        ctx.font = 'bold 14px sans-serif';
-        if (cluster.length > 0) {
-          ctx.fillText(`👿 ${cluster.length}`, cluster[0].x, cluster[0].y - 15);
-        }
-
-        // 自軍との激突（押し引き・相殺バトル）
-        if (clusterY > leaderY - 40 && clusterY < leaderY + 40) {
-          // お互いの人数を同時に減らす
-          const killRate = 2; // 相殺スピード
-          for (let k = 0; k < killRate; k++) {
-            if (mobList.length > 0 && cluster.length > 0) {
-              mobList.pop();
-              cluster.pop();
-              score += 10;
-            }
-          }
-
-          if (cluster.length === 0) {
-            enemies.splice(i, 1);
-          }
-
-          if (mobList.length === 0) {
-            isPlaying = false;
-            drawGameOver();
-            return;
-          }
-        } else if (clusterY > canvas.height + 50) {
-          enemies.splice(i, 1);
-        }
-      }
-
-      // スコア描画
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 16px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`SCORE: ${score}`, 15, 30);
-
-      requestAnimationFrame(loop);
-    }
-
-    function drawStartScreen() {
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('MOB RUSH', canvas.width / 2, 220);
-
-      ctx.fillStyle = '#fff';
-      ctx.font = '14px sans-serif';
-      ctx.fillText('ドラッグしてスタート！', canvas.width / 2, 300);
-      ctx.fillText('「×2」を通って99人以上を目指せ！', canvas.width / 2, 330);
-    }
-
-    function drawGameOver() {
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.fillStyle = '#020617';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = '#ef4444';
-      ctx.font = 'bold 28px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('全滅...', canvas.width / 2, 240);
+      ctx.beginPath();
+      ctx.arc(CENTER, CENTER, ARENA_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fill();
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 4;
+      ctx.stroke();
 
-      ctx.fillStyle = '#fff';
-      ctx.font = '16px sans-serif';
-      ctx.fillText(`撃破スコア: ${score} pt`, canvas.width / 2, 290);
+      // 降下中の無敵ボール描画
+      cheatRainBalls.forEach(b => {
+        ctx.save();
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.restore();
+      });
 
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = '14px sans-serif';
-      ctx.fillText('タップしてリトライ', canvas.width / 2, 350);
+      // プレイヤー描画
+      drawBall(p1.x, p1.y, '#38bdf8', '#0284c7');
+      drawBall(p2.x, p2.y, '#f43f5e', '#be123c');
     }
 
-    drawStartScreen();
+    function drawBall(x, y, mainColor, glowColor) {
+      ctx.save();
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(x, y, BALL_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = mainColor;
+      ctx.fill();
+      ctx.restore();
+    }
   </script>
 </body>
 </html>
