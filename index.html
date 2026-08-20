@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NEON BUMPER - Touch Edition</title>
+  <title>NEON BUMPER - Cheat Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
@@ -61,7 +61,12 @@
         <span class="text-xs font-bold text-cyan-400">P1 (青)</span>
         <span id="p1-score" class="text-lg font-black text-white font-mono ml-1">0</span>
       </div>
-      <div class="text-[10px] text-slate-500 font-bold">FIRST TO 3</div>
+      
+      <!-- ★ここにチートトリガーを設定（3回タップで起動） -->
+      <div id="cheat-trigger" onclick="handleCheatTap()" class="text-[10px] text-slate-500 font-bold cursor-pointer select-none active:scale-95 transition-transform px-2 py-1">
+        FIRST TO 3
+      </div>
+
       <div class="flex items-center space-x-2">
         <span id="p2-score" class="text-lg font-black text-white font-mono mr-1">0</span>
         <span class="text-xs font-bold text-pink-400">P2 (赤)</span>
@@ -69,7 +74,7 @@
       </div>
     </div>
 
-    <!-- ゲーム画面 (レスポンシブサイズ) -->
+    <!-- ゲーム画面 -->
     <div class="relative flex items-center justify-center my-auto">
       <canvas id="gameCanvas" width="360" height="360" class="bg-slate-900 border-2 border-slate-800 rounded-full shadow-2xl cursor-crosshair max-w-[85vw] max-h-[85vw]"></canvas>
       <div id="status-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-950/80 rounded-full hidden">
@@ -77,7 +82,7 @@
       </div>
     </div>
 
-    <!-- スマホ用ジョイスティックコントローラー -->
+    <!-- スマホ用ジョイスティック -->
     <div class="w-full flex justify-center py-2">
       <div id="joystick-zone" class="w-28 h-28 bg-slate-900/80 border-2 border-slate-700/50 rounded-full relative touch-none flex items-center justify-center">
         <div id="joystick-knob" class="w-10 h-10 bg-cyan-500/80 border-2 border-cyan-300 rounded-full absolute transition-transform ease-out duration-75 shadow-lg shadow-cyan-500/30"></div>
@@ -86,7 +91,7 @@
   </div>
 
   <script>
-    const PEER_PREFIX = "tong-bumper-v2-";
+    const PEER_PREFIX = "tong-bumper-v3-";
     let peer = null, conn = null, isHost = false;
 
     const canvas = document.getElementById('gameCanvas');
@@ -118,7 +123,7 @@
       sendInputUpdate();
     }
 
-    // --- スマホ用バーチャルジョイスティック ---
+    // --- ジョイスティック ---
     const stickZone = document.getElementById('joystick-zone');
     const stickKnob = document.getElementById('joystick-knob');
     let stickActive = false;
@@ -160,7 +165,6 @@
 
       stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
 
-      // しきい値を超えたら方向入力
       const threshold = 10;
       myInputs.left = dx < -threshold;
       myInputs.right = dx > threshold;
@@ -176,32 +180,24 @@
       }
     }
 
-    // --- SOSタップ検知機能（画面外タップ） ---
-    let tapHistory = [];
-    const SOS_PATTERN = [0, 0, 0, 1, 1, 1, 0, 0, 0];
+    // --- チートトリガー（FIRST TO 3 を 3回タップ） ---
+    let cheatTapCount = 0;
+    let cheatTapTimer = null;
 
-    window.addEventListener('pointerdown', e => {
-      if (e.target === canvas || stickZone.contains(e.target)) return;
-      window.lastTapStart = Date.now();
-    });
+    function handleCheatTap() {
+      cheatTapCount++;
+      
+      clearTimeout(cheatTapTimer);
+      // 2秒間タップ間隔が空いたらカウントリセット
+      cheatTapTimer = setTimeout(() => {
+        cheatTapCount = 0;
+      }, 2000);
 
-    window.addEventListener('pointerup', e => {
-      if (e.target === canvas || stickZone.contains(e.target) || !window.lastTapStart) return;
-      const duration = Date.now() - window.lastTapStart;
-      const type = duration > 250 ? 1 : 0;
-      const now = Date.now();
-
-      tapHistory.push({ type, time: now });
-      tapHistory = tapHistory.filter(t => now - t.time <= 3000);
-
-      if (tapHistory.length >= 9) {
-        const recent = tapHistory.slice(-9).map(t => t.type);
-        if (recent.every((val, idx) => val === SOS_PATTERN[idx])) {
-          triggerCheatMode();
-          tapHistory = [];
-        }
+      if (cheatTapCount >= 3) {
+        cheatTapCount = 0;
+        triggerCheatMode();
       }
-    });
+    }
 
     function triggerCheatMode() {
       if (cheatActive) return;
@@ -211,7 +207,7 @@
       const attackerColor = isHost ? '#38bdf8' : '#f43f5e';
       
       if (conn && conn.open) {
-        conn.send({ type: 'CHEAT_SOS', attacker: isHost ? 'p1' : 'p2' });
+        conn.send({ type: 'CHEAT_TRIGGER', attacker: isHost ? 'p1' : 'p2' });
       }
       
       spawnCheatRain(isHost ? 'p1' : 'p2', attackerColor);
@@ -291,7 +287,7 @@
           }
         }
 
-        if (data.type === 'CHEAT_SOS') {
+        if (data.type === 'CHEAT_TRIGGER') {
           const color = data.attacker === 'p1' ? '#38bdf8' : '#f43f5e';
           document.getElementById('body-root').classList.add('cheat-active');
           spawnCheatRain(data.attacker, color);
