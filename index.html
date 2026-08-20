@@ -3,473 +3,295 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TongGames - 毎週月曜10時更新！限定ブラウザゲームポータル</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Mob Rush - 広告風大群バトル</title>
   <style>
-    @keyframes pulse-glow {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.85; transform: scale(1.015); }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      user-select: none;
     }
-    .glow-effect { animation: pulse-glow 3s infinite ease-in-out; }
+    canvas {
+      background: #1e293b;
+      border: 3px solid #38bdf8;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      touch-action: none;
+    }
+    .info {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #94a3b8;
+    }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-slate-950">
+<body>
 
-  <!-- ヘッダー -->
-  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-amber-400 flex items-center justify-center text-xl font-black text-slate-950 shadow-lg shadow-cyan-500/20">
-          T
-        </div>
-        <div>
-          <span class="text-xl font-black tracking-wider bg-gradient-to-r from-cyan-400 to-amber-400 bg-clip-text text-transparent">TongGames</span>
-          <p class="text-[10px] text-slate-400 font-medium">毎週月曜 10:00AM 新作解禁</p>
-        </div>
-      </div>
-
-      <!-- ログイン / ユーザー情報エリア -->
-      <div id="user-profile-bar" class="flex items-center space-x-3">
-        <button id="login-btn" onclick="toggleLogin()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition">
-          🔑 ログイン / 会員登録
-        </button>
-        <div id="user-info" class="hidden flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1 rounded-xl">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span id="username-display" class="text-xs font-bold text-cyan-400">ゲストプレイヤー</span>
-          <span class="text-[10px] text-slate-500">☁️ クラウド同期中</span>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- メインコンテンツ -->
-  <main class="max-w-5xl mx-auto px-4 py-8 w-full space-y-10">
-
-    <!-- 今週のゲーム（メインセクション） -->
-    <section class="relative bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
-      <div class="absolute -top-12 -right-12 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div class="flex flex-col md:flex-row gap-6 items-start justify-between">
-        <div class="space-y-4 text-center md:text-left flex-1">
-          <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
-            <span class="bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs px-3 py-1 rounded-full font-bold">
-              🔥 今週の無料公開ゲーム
-            </span>
-            <button id="fav-btn" onclick="toggleFavorite()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1 rounded-full font-bold text-slate-300 transition">
-              ⭐ お気に入りに追加
-            </button>
-          </div>
-
-          <h1 id="current-title" class="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
-            <!-- JavaScriptで動的生成 -->
-          </h1>
-
-          <p id="current-desc" class="text-slate-400 text-sm leading-relaxed">
-            <!-- JavaScriptで動的生成 -->
-          </p>
-
-          <!-- カウントダウン & リマインダー -->
-          <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
-            <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3 px-4 w-full sm:w-auto">
-              <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 text-center sm:text-left">
-                次回更新（月曜 10:00）まで
-              </div>
-              <div id="countdown-timer" class="text-xl font-mono font-black text-amber-400 text-center sm:text-left">
-                00日 00時間 00分 00秒
-              </div>
-            </div>
-
-            <button onclick="addToGoogleCalendar()" class="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl text-xs font-bold text-slate-300 flex items-center justify-center space-x-2 transition">
-              <span>📅</span>
-              <span>更新日をカレンダーに登録</span>
-            </button>
-          </div>
-
-          <!-- プレイボタン -->
-          <div class="pt-2 flex flex-wrap gap-3 justify-center md:justify-start">
-            <button onclick="playCurrentGame()" class="glow-effect px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-2xl text-lg shadow-lg shadow-cyan-500/20 active:scale-95 transition">
-              今すぐ遊ぶ！ 🚀
-            </button>
-          </div>
-        </div>
-
-        <!-- プレビュー & 招待 -->
-        <div class="w-full md:w-64 bg-slate-950 rounded-2xl border border-slate-800 p-4 text-center space-y-3">
-          <div id="current-icon" class="text-6xl my-2">🎮</div>
-          <div class="border-t border-slate-800 pt-3">
-            <span class="text-[10px] text-slate-400 font-bold block mb-2">🤝 フレンドを直接招待</span>
-            <button onclick="sendDirectInvite()" class="w-full py-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl transition">
-              コード不要で一緒に遊ぶ ✉️
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- タブエリア：ランキング / 限定実績 / フレンド一覧 -->
-    <section class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-      <div class="flex border-b border-slate-800 mb-6 space-x-4 overflow-x-auto pb-2">
-        <button onclick="switchTab('ranking')" id="tab-ranking" class="text-sm font-bold pb-2 border-b-2 border-cyan-400 text-cyan-400 transition">
-          🏆 今週のランキング
-        </button>
-        <button onclick="switchTab('achievements')" id="tab-achievements" class="text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
-          🎖️ 限定実績バッジ
-        </button>
-        <button onclick="switchTab('friends')" id="tab-friends" class="text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
-          👥 フレンドリスト (2)
-        </button>
-      </div>
-
-      <!-- ランキング -->
-      <div id="view-ranking" class="space-y-3">
-        <div class="flex items-center justify-between text-xs text-slate-400 px-3 py-1 font-bold">
-          <span>順位 / プレイヤー</span>
-          <span>ハイスコア (毎週月曜リセット)</span>
-        </div>
-        <div id="ranking-list" class="space-y-2"></div>
-      </div>
-
-      <!-- 限定実績 -->
-      <div id="view-achievements" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center space-x-3">
-          <span class="text-3xl">🏅</span>
-          <div>
-            <div class="text-xs font-bold text-slate-200">初陣の証</div>
-            <div class="text-[10px] text-slate-500">ゲームを1回プレイした</div>
-            <span id="badge-played" class="inline-block mt-1 text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">獲得済み</span>
-          </div>
-        </div>
-        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center space-x-3">
-          <span class="text-3xl">🎯</span>
-          <div>
-            <div class="text-xs font-bold text-slate-200">タワーシューター</div>
-            <div class="text-[10px] text-slate-500">ゲームで1,000点突破</div>
-            <span id="badge-score" class="inline-block mt-1 text-[9px] bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-bold">未獲得</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- フレンドリスト -->
-      <div id="view-friends" class="hidden space-y-3">
-        <div class="flex items-center justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800">
-          <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 rounded-full bg-cyan-600 flex items-center justify-center font-bold text-xs">A</div>
-            <div>
-              <div class="text-xs font-bold text-slate-200">Alex_Gamer</div>
-              <div class="text-[10px] text-emerald-400">オンライン (ロビー待機中)</div>
-            </div>
-          </div>
-          <button onclick="inviteFriend('Alex_Gamer')" class="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 font-bold text-xs rounded-xl text-slate-950 transition">
-            一緒に遊ぶ 🎮
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- アーカイブ & リクエスト -->
-    <div class="grid md:grid-cols-2 gap-6">
-      <section class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
-        <div>
-          <div class="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs px-3 py-1 rounded-full font-bold mb-3">
-            <span>⏳ NEXT WEEK</span>
-          </div>
-          <h2 id="next-title" class="text-xl font-bold text-white mb-2"></h2>
-          <p id="next-desc" class="text-xs text-slate-400 leading-relaxed"></p>
-        </div>
-      </section>
-
-      <section class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
-        <div>
-          <div class="inline-flex items-center space-x-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs px-3 py-1 rounded-full font-bold mb-3">
-            <span>📦 ARCHIVE & REQUEST</span>
-          </div>
-          <h2 class="text-xl font-bold text-white mb-2">公開終了ゲームと復刻リクエスト</h2>
-          <div id="archive-list" class="space-y-2 mt-3"></div>
-        </div>
-      </section>
-    </div>
-
-  </main>
-
-  <!-- ゲーム画面モーダル -->
-  <div id="game-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md hidden z-50 flex-col items-center justify-center p-4">
-    <div class="w-full max-w-xl bg-slate-900 border border-cyan-500/30 rounded-3xl p-5 space-y-3 relative text-center shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 id="modal-title" class="text-base font-bold text-cyan-400">ツイン・タワー・バスター</h3>
-        <button onclick="closeGame()" class="text-slate-400 hover:text-white font-bold text-lg px-2">✕ 閉じる</button>
-      </div>
-
-      <!-- ゲームプレイ用Canvas -->
-      <div class="relative bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex justify-center items-center">
-        <canvas id="gameCanvas" width="480" height="320" class="w-full max-w-full cursor-crosshair"></canvas>
-      </div>
-
-      <div class="text-xs text-slate-400 flex justify-between items-center px-2">
-        <span>💡 操作方法: 赤い敵を<b>クリック / タップ</b>して爆破！</span>
-        <button onclick="startGame()" class="px-3 py-1 bg-cyan-500 text-slate-950 font-bold rounded-lg hover:bg-cyan-400">リトライ 🔄</button>
-      </div>
-    </div>
-  </div>
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
+  <div class="info">左右にドラッグして「倍率ゲート」を通ろう！</div>
 
   <script>
-    const gameSchedule = [
-      {
-        id: "game-1",
-        title: "🛡️🤖 ツイン・タワー・バスター",
-        desc: "上空から迫りくる敵ドローンをクリック/タップで撃ち落とせ！タワーの防衛線を守り抜こう。",
-        icon: "🤖",
-        ranking: [
-          { name: "Sora_Tong", score: "2,400 pt" },
-          { name: "Alex_Gamer", score: "1,800 pt" }
-        ]
-      },
-      {
-        id: "game-2",
-        title: "✊✌️✋ 超速！心理戦じゃんけん",
-        desc: "心理戦とスピードが交錯する対戦ゲーム。",
-        icon: "✊",
-        ranking: [{ name: "Master_J", score: "15連勝" }]
-      }
-    ];
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-    const BASE_MONDAY_10AM = new Date(2026, 0, 5, 10, 0, 0).getTime();
-    const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-    let isLoggedIN = false;
-    let isFavorite = false;
-    let voteCounts = { "game-2": 142 };
-
-    function getScheduleState() {
-      const now = new Date().getTime();
-      const timePassed = now - BASE_MONDAY_10AM;
-      let weekIndex = Math.floor(timePassed / ONE_WEEK_MS);
-      if (weekIndex < 0) weekIndex = 0;
-      const nextSwitchTime = BASE_MONDAY_10AM + ((weekIndex + 1) * ONE_WEEK_MS);
-      return { weekIndex, nextSwitchTime };
-    }
-
-    function renderPortal() {
-      const { weekIndex, nextSwitchTime } = getScheduleState();
-      const currentIdx = weekIndex % gameSchedule.length;
-      const nextIdx = (weekIndex + 1) % gameSchedule.length;
-
-      const currentGame = gameSchedule[currentIdx];
-      const nextGame = gameSchedule[nextIdx];
-
-      document.getElementById('current-title').innerText = currentGame.title;
-      document.getElementById('current-desc').innerText = currentGame.desc;
-      document.getElementById('current-icon').innerText = currentGame.icon;
-      document.getElementById('next-title').innerText = nextGame.title;
-      document.getElementById('next-desc').innerText = nextGame.desc;
-
-      const rankingContainer = document.getElementById('ranking-list');
-      rankingContainer.innerHTML = '';
-      currentGame.ranking.forEach((item, idx) => {
-        const div = document.createElement('div');
-        div.className = "flex items-center justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800 text-xs";
-        div.innerHTML = `
-          <div class="flex items-center space-x-3">
-            <span class="font-black text-amber-400 w-4">#${idx + 1}</span>
-            <span class="font-bold text-slate-200">${item.name}</span>
-          </div>
-          <span class="font-mono text-cyan-400 font-bold">${item.score}</span>
-        `;
-        rankingContainer.appendChild(div);
-      });
-
-      updateCountdown(nextSwitchTime);
-    }
-
-    // --- インラインゲーム実装（ツイン・タワー・バスター） ---
-    let canvas, ctx;
+    let isPlaying = false;
     let score = 0;
-    let hp = 100;
-    let enemies = [];
-    let gameLoopId = null;
-    let isGameOver = false;
+    let playerX = canvas.width / 2;
+    let isDragging = false;
 
-    function playCurrentGame() {
-      document.getElementById('game-modal').classList.remove('hidden');
-      document.getElementById('game-modal').classList.add('flex');
-      
-      canvas = document.getElementById('gameCanvas');
-      ctx = canvas.getContext('2d');
-      
-      canvas.onclick = handleCanvasClick;
-      startGame();
+    // 自軍プレイヤーの大群データ
+    let mobList = [];
+    const MOB_RADIUS = 5;
+
+    // 障害物・ゲート・敵軍のデータ
+    let gates = [];
+    let enemies = [];
+    let speed = 3;
+    let frame = 0;
+
+    // タッチ/マウス操作
+    function handleMove(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      playerX = (clientX - rect.left) * (canvas.width / rect.width);
+      if (playerX < 30) playerX = 30;
+      if (playerX > canvas.width - 30) playerX = canvas.width - 30;
     }
+
+    canvas.addEventListener('mousedown', (e) => { isDragging = true; handleMove(e); if(!isPlaying) startGame(); });
+    canvas.addEventListener('mousemove', (e) => { if (isDragging) handleMove(e); });
+    window.addEventListener('mouseup', () => isDragging = false);
+
+    canvas.addEventListener('touchstart', (e) => { isDragging = true; handleMove(e); if(!isPlaying) startGame(); });
+    canvas.addEventListener('touchmove', (e) => { if (isDragging) handleMove(e); });
+    window.addEventListener('touchend', () => isDragging = false);
 
     function startGame() {
+      isPlaying = true;
       score = 0;
-      hp = 100;
+      speed = 3.5;
+      frame = 0;
+      playerX = canvas.width / 2;
+      mobList = [{ x: playerX, y: 500 }];
+      gates = [];
       enemies = [];
-      isGameOver = false;
-      if (gameLoopId) cancelAnimationFrame(gameLoopId);
-      gameLoop();
+      loop();
     }
 
-    function spawnEnemy() {
-      if (Math.random() < 0.04) {
-        enemies.push({
-          x: Math.random() * (canvas.width - 40) + 20,
-          y: -20,
-          speed: 1 + Math.random() * 1.5,
-          radius: 15
+    // 大群の人数を増減する処理
+    function adjustMobCount(targetCount) {
+      targetCount = Math.min(Math.max(1, targetCount), 200); // 最大200人制限
+      while (mobList.length < targetCount) {
+        // 集団の近くに新メンバーをポップ
+        const leader = mobList[0] || { x: playerX, y: 500 };
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * (Math.sqrt(mobList.length) * 4);
+        mobList.push({
+          x: leader.x + Math.cos(angle) * dist,
+          y: leader.y + Math.sin(angle) * dist
         });
       }
+      while (mobList.length > targetCount) {
+        mobList.pop();
+      }
     }
 
-    function gameLoop() {
+    // ゲート生成（「+10」や「×2」など）
+    function spawnGate() {
+      const isMultiplier = Math.random() > 0.4;
+      const val1 = isMultiplier ? Math.floor(Math.random() * 2) + 2 : Math.floor(Math.random() * 15) + 5;
+      const val2 = isMultiplier ? Math.floor(Math.random() * 2) + 2 : Math.floor(Math.random() * 10) + 1;
+
+      gates.push({
+        y: -60,
+        left: { type: isMultiplier ? 'mul' : 'add', val: val1 },
+        right: { type: 'add', val: val2 }
+      });
+    }
+
+    // 敵の大群生成（押し寄せる壁）
+    function spawnEnemyCluster() {
+      const enemyCount = Math.floor(mobList.length * (0.8 + Math.random() * 0.6)) + 5;
+      const clusterX = Math.random() * (canvas.width - 120) + 60;
+      let cluster = [];
+      
+      for (let i = 0; i < enemyCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * (Math.sqrt(enemyCount) * 4);
+        cluster.push({
+          x: clusterX + Math.cos(angle) * dist,
+          y: -80 + Math.sin(angle) * dist
+        });
+      }
+      enemies.push(cluster);
+    }
+
+    function loop() {
+      if (!isPlaying) return;
+      frame++;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 背景・防衛拠点（ツインタワー）描画
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // タワー A & B
-      ctx.fillStyle = '#06b6d4';
-      ctx.fillRect(80, canvas.height - 50, 40, 50);
-      ctx.fillRect(canvas.width - 120, canvas.height - 50, 40, 50);
-
-      // 地面
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
-
-      if (!isGameOver) {
-        spawnEnemy();
-
-        // 敵の移動・描画
-        for (let i = enemies.length - 1; i >= 0; i--) {
-          let e = enemies[i];
-          e.y += e.speed;
-
-          ctx.beginPath();
-          ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-          ctx.fillStyle = '#ef4444';
-          ctx.fill();
-          ctx.strokeStyle = '#fca5a5';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-
-          // 到達判定（ダメージ）
-          if (e.y >= canvas.height - 20) {
-            hp -= 10;
-            enemies.splice(i, 1);
-            if (hp <= 0) isGameOver = true;
-          }
+      // --- 1. プレイヤー（青い大群）の移動演算 ---
+      const leaderY = 500;
+      mobList.forEach((m, idx) => {
+        if (idx === 0) {
+          m.x += (playerX - m.x) * 0.2;
+          m.y = leaderY;
+        } else {
+          // リーダーを追従して固まる物理挙動
+          const target = mobList[0];
+          const dx = target.x - m.x;
+          const dy = target.y - m.y;
+          m.x += dx * 0.08 + (Math.random() - 0.5) * 2;
+          m.y += dy * 0.08 + (Math.random() - 0.5) * 2;
         }
 
-        // UI（スコア & HP）
+        // 描画（自軍青色）
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, MOB_RADIUS, 0, Math.PI * 2);
         ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillText(`SCORE: ${score}`, 15, 25);
+        ctx.fill();
+      });
 
-        ctx.fillStyle = hp > 30 ? '#10b981' : '#f43f5e';
-        ctx.fillText(`TOWER HP: ${hp}%`, canvas.width - 130, 25);
+      // 人数カウンター描画
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      if (mobList.length > 0) {
+        ctx.fillText(`👥 ${mobList.length}`, mobList[0].x, mobList[0].y - 25);
+      }
 
-        gameLoopId = requestAnimationFrame(gameLoop);
-      } else {
-        // ゲームオーバー画面
-        ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // --- 2. ゲートの移動と判定 ---
+      if (frame % 120 === 0) spawnGate();
 
-        ctx.fillStyle = '#f43f5e';
-        ctx.font = 'bold 24px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 10);
+      for (let i = gates.length - 1; i >= 0; i--) {
+        let g = gates[i];
+        g.y += speed;
 
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = '14px sans-serif';
-        ctx.fillText(`最終スコア: ${score} pt`, canvas.width / 2, canvas.height / 2 + 20);
+        // 左ゲート
+        ctx.fillStyle = 'rgba(14, 165, 233, 0.7)';
+        ctx.fillRect(10, g.y, canvas.width / 2 - 15, 40);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText(g.left.type === 'mul' ? `×${g.left.val}` : `+${g.left.val}`, canvas.width / 4, g.y + 25);
 
-        // 実績解除チェック
-        if (score >= 1000) {
-          const badge = document.getElementById('badge-score');
-          if (badge) {
-            badge.innerText = "獲得済み";
-            badge.className = "inline-block mt-1 text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold";
-          }
+        // 右ゲート
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
+        ctx.fillRect(canvas.width / 2 + 5, g.y, canvas.width / 2 - 15, 40);
+        ctx.fillText(g.right.type === 'mul' ? `×${g.right.val}` : `+${g.right.val}`, (canvas.width / 4) * 3, g.y + 25);
+
+        // 接触判定
+        if (g.y > leaderY - 20 && g.y < leaderY + 20) {
+          const chosenGate = playerX < canvas.width / 2 ? g.left : g.right;
+          let newCount = mobList.length;
+          if (chosenGate.type === 'mul') newCount *= chosenGate.val;
+          else newCount += chosenGate.val;
+
+          adjustMobCount(newCount);
+          gates.splice(i, 1);
+        } else if (g.y > canvas.height) {
+          gates.splice(i, 1);
         }
       }
-    }
 
-    function handleCanvasClick(e) {
-      if (isGameOver) return;
-      const rect = canvas.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+      // --- 3. 敵軍（赤色）の移動とぶつかり合い（バトル） ---
+      if (frame % 180 === 0) spawnEnemyCluster();
 
       for (let i = enemies.length - 1; i >= 0; i--) {
-        let enemy = enemies[i];
-        let dist = Math.hypot(enemy.x - clickX, enemy.y - clickY);
-        if (dist < enemy.radius + 15) { // 判定広め
-          enemies.splice(i, 1);
-          score += 100;
+        let cluster = enemies[i];
+        let clusterY = 0;
 
-          // 爆破エフェクト（簡易）
+        cluster.forEach(e => {
+          e.y += speed * 0.8;
+          clusterY = e.y;
+
+          // 赤い敵描画
           ctx.beginPath();
-          ctx.arc(clickX, clickY, 20, 0, Math.PI * 2);
-          ctx.fillStyle = '#fbbf24';
+          ctx.arc(e.x, e.y, MOB_RADIUS, 0, Math.PI * 2);
+          ctx.fillStyle = '#ef4444';
           ctx.fill();
-          break;
+        });
+
+        // 敵人数表示
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = 'bold 14px sans-serif';
+        if (cluster.length > 0) {
+          ctx.fillText(`👿 ${cluster.length}`, cluster[0].x, cluster[0].y - 15);
+        }
+
+        // 自軍との激突（押し引き・相殺バトル）
+        if (clusterY > leaderY - 40 && clusterY < leaderY + 40) {
+          // お互いの人数を同時に減らす
+          const killRate = 2; // 相殺スピード
+          for (let k = 0; k < killRate; k++) {
+            if (mobList.length > 0 && cluster.length > 0) {
+              mobList.pop();
+              cluster.pop();
+              score += 10;
+            }
+          }
+
+          if (cluster.length === 0) {
+            enemies.splice(i, 1);
+          }
+
+          if (mobList.length === 0) {
+            isPlaying = false;
+            drawGameOver();
+            return;
+          }
+        } else if (clusterY > canvas.height + 50) {
+          enemies.splice(i, 1);
         }
       }
+
+      // スコア描画
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`SCORE: ${score}`, 15, 30);
+
+      requestAnimationFrame(loop);
     }
 
-    function closeGame() {
-      if (gameLoopId) cancelAnimationFrame(gameLoopId);
-      document.getElementById('game-modal').classList.add('hidden');
-      document.getElementById('game-modal').classList.remove('flex');
+    function drawStartScreen() {
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('MOB RUSH', canvas.width / 2, 220);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('ドラッグしてスタート！', canvas.width / 2, 300);
+      ctx.fillText('「×2」を通って99人以上を目指せ！', canvas.width / 2, 330);
     }
 
-    // --- その他のUI関数 ---
-    function toggleLogin() {
-      isLoggedIN = !isLoggedIN;
-      document.getElementById('login-btn').classList.toggle('hidden', isLoggedIN);
-      document.getElementById('user-info').classList.toggle('hidden', !isLoggedIN);
-      document.getElementById('user-info').classList.toggle('flex', isLoggedIN);
+    function drawGameOver() {
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('全滅...', canvas.width / 2, 240);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px sans-serif';
+      ctx.fillText(`撃破スコア: ${score} pt`, canvas.width / 2, 290);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('タップしてリトライ', canvas.width / 2, 350);
     }
 
-    function toggleFavorite() {
-      isFavorite = !isFavorite;
-      const btn = document.getElementById('fav-btn');
-      btn.innerText = isFavorite ? "★ お気に入り登録中" : "⭐ お気に入りに追加";
-    }
-
-    function sendDirectInvite() {
-      alert("招待用URLをコピーしました！フレンドに送るだけで合流可能です。");
-    }
-
-    function inviteFriend(name) {
-      alert(`${name} さんへ招待通知を送りました！`);
-    }
-
-    function addToGoogleCalendar() {
-      alert("Googleカレンダーの登録画面を開きます。");
-    }
-
-    function switchTab(tabName) {
-      ['ranking', 'achievements', 'friends'].forEach(t => {
-        document.getElementById(`view-${t}`).classList.add('hidden');
-        document.getElementById(`tab-${t}`).className = "text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition";
-      });
-      document.getElementById(`view-${tabName}`).classList.remove('hidden');
-      document.getElementById(`tab-${tabName}`).className = "text-sm font-bold pb-2 border-b-2 border-cyan-400 text-cyan-400 transition";
-    }
-
-    function updateCountdown(targetTime) {
-      setInterval(() => {
-        const diff = targetTime - new Date().getTime();
-        if (diff <= 0) return;
-        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((diff % (1000 * 60)) / 1000);
-        document.getElementById('countdown-timer').innerText = `${d}日 ${h}時間 ${m}分 ${s}秒`;
-      }, 1000);
-    }
-
-    renderPortal();
+    drawStartScreen();
   </script>
 </body>
 </html>
