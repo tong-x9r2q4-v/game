@@ -4,454 +4,200 @@
     <meta charset="UTF-8">
     <meta name="robots" content="noindex,nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENBEI TRACKER ULTIMATE 120+</title>
+    <title>SENBEI FACTORY AI</title>
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;600;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    
-    <!-- Leaflet & PubNub -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.2.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --cyan: #00ffff;
-            --red: #ff0033;
-            --gold: #ffcc00;
-            --green: #00ff66;
-            --purple: #cc00ff;
-            --bg: #020204;
-            --panel-bg: rgba(10, 15, 24, 0.85);
-            --glow-cyan: 0 0 10px rgba(0, 255, 255, 0.5);
-            --glow-red: 0 0 10px rgba(255, 0, 51, 0.5);
+            --neon-orange: #ff6600;
+            --neon-gold: #ffcc00;
+            --neon-cyan: #00ffff;
+            --bg-dark: #0a0a0c;
+            --panel-bg: rgba(20, 20, 28, 0.85);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Exo 2', sans-serif; user-select: none; }
-        body { background: var(--bg); color: #fff; overflow-x: hidden; min-height: 100vh; font-size: 12px; }
+        body { background: var(--bg-dark); color: #fff; max-width: 500px; margin: 0 auto; padding: 12px; }
 
-        /* スキャンアニメーション overlay */
-        #bootScan {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; color: var(--cyan);
-            font-family: 'Share Tech Mono', monospace;
-        }
-        .scan-line { width: 80%; height: 2px; background: var(--cyan); box-shadow: var(--glow-cyan); animation: scan 1.5s infinite; }
-        @keyframes scan { 0% { transform: translateY(-100px); } 100% { transform: translateY(100px); } }
-
-        /* ヘッダー UI */
         header {
-            background: var(--panel-bg); border-bottom: 1px solid var(--cyan);
-            padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(5px);
-        }
-        .logo { font-size: 1rem; font-weight: 900; letter-spacing: 2px; color: #fff; text-shadow: var(--glow-cyan); }
-        .sys-status { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--green); display: flex; gap: 8px; }
-
-        /* メイン レイアウト */
-        .grid-container { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 8px; max-width: 800px; margin: 0 auto; }
-
-        /* パネルベース */
-        .panel {
-            background: var(--panel-bg); border: 1px solid rgba(0, 255, 255, 0.2);
-            border-radius: 4px; padding: 8px; position: relative; overflow: hidden;
-        }
-        .panel-header {
-            font-size: 0.7rem; font-weight: 900; color: var(--cyan); letter-spacing: 1px;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.2); padding-bottom: 4px; margin-bottom: 6px;
+            border-bottom: 2px solid var(--neon-orange);
+            padding-bottom: 8px; margin-bottom: 12px;
             display: flex; justify-content: space-between; align-items: center;
         }
+        h1 { font-size: 1.1rem; color: var(--neon-orange); font-weight: 900; letter-spacing: 1px; }
+        .version { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--neon-cyan); }
 
-        /* ゲーミフィケーション・ダッシュボード */
-        .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; text-align: center; }
-        .dash-item { background: rgba(0,0,0,0.4); padding: 4px; border: 1px solid rgba(255,255,255,0.1); }
-        .dash-label { font-size: 0.55rem; color: #888; }
-        .dash-val { font-size: 0.9rem; font-weight: 900; color: var(--gold); font-family: 'Share Tech Mono'; }
+        /* スコア表示 */
+        .score-board {
+            background: var(--panel-bg); border: 1px solid var(--neon-gold);
+            border-radius: 6px; padding: 12px; margin-bottom: 12px; text-align: center;
+        }
+        .score-val { font-family: 'Share Tech Mono', monospace; font-size: 1.8rem; color: var(--neon-gold); font-weight: bold; }
+        .cps-val { font-size: 0.75rem; color: var(--neon-cyan); margin-top: 4px; }
 
-        /* EXPバー */
-        .exp-bar-container { width: 100%; height: 4px; background: #222; margin-top: 4px; border-radius: 2px; }
-        .exp-bar-fill { height: 100%; width: 45%; background: var(--green); box-shadow: 0 0 5px var(--green); }
+        /* メインせんべいボタン */
+        .click-area {
+            display: flex; justify-content: center; margin: 20px 0;
+        }
+        .senbei-btn {
+            width: 160px; height: 160px; border-radius: 50%;
+            background: radial-gradient(circle, #e68a00 0%, #995c00 100%);
+            border: 4px solid var(--neon-gold);
+            box-shadow: 0 0 20px rgba(255, 204, 0, 0.4);
+            font-size: 4rem; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: transform 0.05s;
+        }
+        .senbei-btn:active { transform: scale(0.92); }
 
-        /* カメラ HUD */
-        .cam-viewport { position: relative; width: 100%; height: 240px; background: #000; border: 1px solid var(--cyan); }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        /* ショップ & アップグレード */
+        .section-title {
+            font-size: 0.75rem; color: var(--neon-orange); border-left: 3px solid var(--neon-orange);
+            padding-left: 6px; margin: 12px 0 6px 0; font-weight: bold;
+        }
         
-        /* ビジョンモード */
-        video.night { filter: sepia(100%) hue-rotate(90deg) saturate(300%) contrast(150%); }
-        video.thermal { filter: invert(100%) hue-rotate(180deg) saturate(200%); }
-        video.bw { filter: grayscale(100%) contrast(200%); }
-
-        .hud-layer {
-            position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none;
-            display: flex; flex-direction: column; justify-content: space-between; padding: 6px;
-            font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: var(--cyan);
+        .item-list { display: flex; flex-direction: column; gap: 6px; }
+        .item-card {
+            background: var(--panel-bg); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px; padding: 8px 12px; display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer;
         }
-        .hud-target {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80px; height: 80px; border: 1px dashed var(--red); border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(0.9); } 50% { transform: translate(-50%, -50%) scale(1.1); } 100% { transform: translate(-50%, -50%) scale(0.9); } }
-
-        /* ツールバー & ボタン */
-        .btn-group { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-        .btn {
-            flex: 1; min-width: 60px; padding: 6px; background: rgba(0, 255, 255, 0.1);
-            border: 1px solid var(--cyan); color: #fff; font-size: 0.65rem; font-weight: 600;
-            cursor: pointer; text-align: center; backdrop-filter: blur(2px);
-        }
-        .btn:active { background: var(--cyan); color: #000; }
-        .btn-red { border-color: var(--red); color: var(--red); }
-        .btn-red:active { background: var(--red); color: #fff; }
-        .btn-gold { border-color: var(--gold); color: var(--gold); }
-
-        /* マップ */
-        #map { height: 200px; width: 100%; border: 1px solid var(--cyan); }
-
-        /* 入力フォーム */
-        input[type="text"], select {
-            width: 100%; padding: 6px; background: rgba(0,0,0,0.6); border: 1px solid var(--cyan);
-            color: #fff; font-size: 0.75rem; margin-bottom: 4px;
-        }
-
-        /* ギャラリー & フィード */
-        .scroll-x { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
-        .thumb { width: 60px; height: 60px; object-fit: cover; border: 1px solid var(--cyan); flex-shrink: 0; cursor: pointer; }
-
-        .feed-item {
-            background: rgba(0,0,0,0.5); border-left: 2px solid var(--cyan);
-            padding: 6px; margin-bottom: 4px; font-size: 0.7rem;
-        }
-
-        /* タブ切り替えパネル */
-        .tab-bar { display: flex; border-bottom: 1px solid var(--cyan); margin-bottom: 6px; }
-        .tab { flex: 1; text-align: center; padding: 6px; font-size: 0.65rem; cursor: pointer; background: #000; }
-        .tab.active { background: var(--cyan); color: #000; font-weight: 900; }
-
-        /* システムログ */
-        #sysLog { height: 60px; background: #000; border: 1px solid #333; color: var(--green); font-family: monospace; font-size: 0.55rem; overflow-y: auto; padding: 4px; }
+        .item-card.disabled { opacity: 0.4; pointer-events: none; }
+        .item-card:hover { border-color: var(--neon-cyan); }
+        
+        .item-name { font-size: 0.8rem; font-weight: bold; }
+        .item-desc { font-size: 0.65rem; color: #aaa; }
+        .item-cost { font-family: 'Share Tech Mono'; color: var(--neon-gold); font-weight: bold; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
-<!-- 起動アニメーション (機能 120) -->
-<div id="bootScan">
-    <div style="font-size: 1.2rem; font-weight: 900;">SENBEI-NET v4.0 ULTIMATE</div>
-    <div style="margin: 10px 0;">SYSTEM INITIALIZING...</div>
-    <div class="scan-line"></div>
-</div>
-
-<!-- ヘッダー (機能 77, 78, 85, 118) -->
 <header>
-    <div class="logo">🧸 SENBEI TRACKER 120+</div>
-    <div class="sys-status">
-        <span>📶 <span id="pingVal">12ms</span></span>
-        <span>🔋 <span id="batVal">98%</span></span>
-        <span>🌡️ <span id="tempVal">26°C</span></span>
-        <button class="btn" onclick="toggleFullScreen()" style="padding:2px 4px;">全画面</button>
-    </div>
+    <h1>🍘 SENBEI FACTORY AI</h1>
+    <div class="version">v1.0.0</div>
 </header>
 
-<div class="grid-container">
-
-    <!-- ゲーミフィケーション・ダッシュボード (機能 1, 26, 27, 28, 30, 44) -->
-    <div class="panel">
-        <div class="panel-header">
-            <span>AGENT PROFILE</span>
-            <span id="rankBadge" style="color:var(--gold);">RANK: MASTER AGENT</span>
-        </div>
-        <div class="dash-grid">
-            <div class="dash-item"><div class="dash-label">PTS</div><div class="dash-val" id="pts">1450</div></div>
-            <div class="dash-item"><div class="dash-label">STREAK</div><div class="dash-val" id="streak">5 Days</div></div>
-            <div class="dash-item"><div class="dash-label">EXP</div><div class="dash-val">82%</div></div>
-            <div class="dash-item"><div class="dash-label">QUEST</div><div class="dash-val" style="color:var(--green);">3/5</div></div>
-        </div>
-        <div class="exp-bar-container"><div class="exp-bar-fill"></div></div>
-    </div>
-
-    <!-- カメラ ＆ AIターゲット HUD (機能 1〜20, 76, 83, 99, 100) -->
-    <div class="panel">
-        <div class="panel-header">
-            <span>TARGET OPTICS (AI DETECTION)</span>
-            <span id="aiMatch" style="color:var(--green);">AI MATCH: 98.4%</span>
-        </div>
-
-        <div class="cam-viewport">
-            <video id="webcam" autoplay playsinline></video>
-            <div class="hud-layer">
-                <div style="display:flex; justify-content:space-between;">
-                    <div>FPS: <span id="fpsVal">60</span> | ISO: AUTO</div>
-                    <div>LAT: <span id="hudLat">35.68</span> LNG: <span id="hudLng">139.76</span></div>
-                </div>
-                <div class="hud-target"></div>
-                <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-                    <div>GYRO: <span id="gyroVal">X:0 Y:0</span></div>
-                    <div>COMPASS: <span id="compassVal">180° S</span></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 視覚・センサーコントロール (機能 3, 4, 12, 16, 93) -->
-        <div class="btn-group">
-            <button class="btn" onclick="setVision('normal')">通常</button>
-            <button class="btn" onclick="setVision('night')">🌙 暗視</button>
-            <button class="btn" onclick="setVision('thermal')">🔥 サーモ</button>
-            <button class="btn" onclick="setVision('bw')">モノクロ</button>
-            <button class="btn" onclick="toggleFlash()">💡 ライト</button>
-            <button class="btn" onclick="switchCamera()">🔄 カメラ切替</button>
-        </div>
-    </div>
-
-    <!-- 投稿・情報追加パネル (機能 7, 8, 41, 58, 112) -->
-    <div class="panel">
-        <div class="panel-header">REPORT SIGHTING</div>
-        <input type="text" id="memoText" placeholder="目撃場所・メモ (例: ソファー裏、状態: 良好)">
-        <div style="display:flex; gap:4px; margin-bottom:4px;">
-            <select id="sightingType">
-                <option value="sighting">目撃情報 (+100 PT)</option>
-                <option value="found">確定発見！ (+500 PT)</option>
-                <option value="item">落とし物・パーツ発見 (+200 PT)</option>
-            </select>
-            <label style="font-size:0.65rem; display:flex; align-items:center;">
-                <input type="checkbox" id="secretMode"> 匿名モード
-            </label>
-        </div>
-        <button class="btn btn-gold" onclick="sendReport()" style="width:100%; padding:10px; font-size:0.8rem;">
-            📸 目撃情報をネットワーク送信
-        </button>
-    </div>
-
-    <!-- マルチツール・タブ (機能 31, 51, 76~100, 101) -->
-    <div class="panel">
-        <div class="tab-bar">
-            <div class="tab active" onclick="switchTab('mapTab')">MAPPING</div>
-            <div class="tab" onclick="switchTab('chatTab')">CHAT</div>
-            <div class="tab" onclick="switchTab('toolsTab')">TOOLS</div>
-            <div class="tab" onclick="switchTab('sysTab')">SYSTEM</div>
-        </div>
-
-        <!-- 地図タブ (機能 21~25, 89) -->
-        <div id="mapTab" class="tab-content">
-            <div id="map"></div>
-            <div class="btn-group" style="margin-top:4px;">
-                <button class="btn" onclick="fitMap()">全ピン収束</button>
-                <button class="btn" onclick="shareGPS()">座標コピー</button>
-                <button class="btn btn-red" onclick="triggerAlarm()">🚨 SOSアラーム</button>
-            </div>
-        </div>
-
-        <!-- チャットタブ (機能 51~54, 56, 66) -->
-        <div id="chatTab" class="tab-content" style="display:none;">
-            <div id="chatBox" style="height:120px; overflow-y:auto; background:#000; padding:4px; margin-bottom:4px; font-size:0.65rem;">
-                <div style="color:var(--cyan);">[SYS]: 捜索チャットルーム #01 に接続しました</div>
-            </div>
-            <div style="display:flex; gap:4px;">
-                <input type="text" id="chatMsg" placeholder="メッセージを入力..." style="margin:0;">
-                <button class="btn" onclick="sendChat()">送信</button>
-            </div>
-        </div>
-
-        <!-- ツールタブ (機能 76~100, 95, 98) -->
-        <div id="toolsTab" class="tab-content" style="display:none;">
-            <div class="btn-group">
-                <button class="btn" onclick="playBGM()">🎵 捜索BGM</button>
-                <button class="btn" onclick="speakStatus()">🔊 状態読み上げ</button>
-                <button class="btn" onclick="exportData()">💾 CSV出力</button>
-                <button class="btn" onclick="toggleGacha()">🎰 捜索ガチャ</button>
-            </div>
-        </div>
-
-        <!-- システム管理タブ (機能 101~120) -->
-        <div id="sysTab" class="tab-content" style="display:none;">
-            <div class="btn-group">
-                <button class="btn btn-red" onclick="clearData()">⚠️ 全クリア</button>
-                <button class="btn" onclick="toggleDebug()">🐛 デバッグ</button>
-            </div>
-            <div style="margin-top:4px; font-size:0.6rem; color:#888;">BUILD: 2026.08.21-120PLUS</div>
-        </div>
-    </div>
-
-    <!-- ギャラリー (機能 5, 39, 63) -->
-    <div class="panel">
-        <div class="panel-header">IMAGE LOGS</div>
-        <div class="scroll-x" id="galleryList"></div>
-    </div>
-
-    <!-- リアルタイムフィード (機能 53, 64, 70, 74) -->
-    <div class="panel">
-        <div class="panel-header">LIVE SIGHTINGS FEED</div>
-        <div id="feedList"></div>
-    </div>
-
-    <!-- システムログ (機能 114) -->
-    <div class="panel">
-        <div class="panel-header">CONSOLE LOG</div>
-        <div id="sysLog"></div>
-    </div>
-
+<!-- ポイント＆生産量表示 -->
+<div class="score-board">
+    <div class="score-val" id="count">0</div>
+    <div style="font-size: 0.65rem; color: #aaa;">TOTAL SENBEI</div>
+    <div class="cps-val">毎秒生産: <span id="cps">0</span> 枚/秒</div>
 </div>
 
+<!-- クリックボタン -->
+<div class="click-area">
+    <div class="senbei-btn" onclick="clickSenbei()">🍘</div>
+</div>
+
+<!-- AI装置（自動生産） -->
+<div class="section-title">AI生産設備（自動生産）</div>
+<div class="item-list" id="buildingList"></div>
+
+<!-- AI味覚研究（強化） -->
+<div class="section-title">AI味覚学習（製造効率アップ）</div>
+<div class="item-list" id="upgradeList"></div>
+
 <script>
-    // --- 初期化 & 起動処理 (機能 120) ---
-    setTimeout(() => {
-        document.getElementById('bootScan').style.display = 'none';
-        log("SENBEI TRACKER SYSTEM READY.");
-    }, 1200);
+    let senbeiCount = 0;
+    let clickPower = 1;
 
-    function log(msg) {
-        const box = document.getElementById('sysLog');
-        box.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-        box.scrollTop = box.scrollHeight;
+    // 設備データ
+    const buildings = [
+        { id: 'b1', name: '全自動AI手焼き機', cost: 15, cps: 0.5, count: 0 },
+        { id: 'b2', name: '醤油塗布ロボット', cost: 100, cps: 4, count: 0 },
+        { id: 'b3', name: '高速AI焼きライン', cost: 1100, cps: 32, count: 0 },
+        { id: 'b4', name: '量子せんべい工場', cost: 12000, cps: 260, count: 0 }
+    ];
+
+    // アップグレードデータ
+    const upgrades = [
+        { id: 'u1', name: '特製しょうゆ味', cost: 100, mult: 2, bought: false },
+        { id: 'u2', name: '高級のり巻き', cost: 500, mult: 3, bought: false },
+        { id: 'u3', name: '激辛トウガラシ', cost: 5000, mult: 5, bought: false }
+    ];
+
+    // クリック処理
+    function clickSenbei() {
+        senbeiCount += clickPower;
+        updateUI();
     }
 
-    // --- PubNub (機能 51, 55, 70) ---
-    const pubnub = new PubNub({
-        publishKey: "demo", subscribeKey: "demo",
-        userId: "agent_" + Math.floor(Math.random() * 10000)
-    });
-    const CHANNEL = "senbei_ultimate_120";
-    pubnub.subscribe({ channels: [CHANNEL] });
-
-    // --- カメラ & センサー (機能 1~20, 76, 83) ---
-    const video = document.getElementById('webcam');
-    let currentStream = null;
-    let facingMode = "environment";
-
-    function initCam() {
-        if(currentStream) currentStream.getTracks().forEach(t => t.stop());
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode }, audio: false })
-        .then(stream => {
-            currentStream = stream;
-            video.srcObject = stream;
-        }).catch(e => log("カメラ接続エラー"));
-    }
-    initCam();
-
-    function switchCamera() {
-        facingMode = facingMode === "environment" ? "user" : "environment";
-        initCam();
-        log("カメラ切り替え");
+    // 総毎秒生産量（CPS）計算
+    function getCPS() {
+        return buildings.reduce((sum, b) => sum + (b.cps * b.count), 0);
     }
 
-    function setVision(mode) {
-        video.className = mode === 'normal' ? '' : mode;
-        log("ビジョンモード変更: " + mode);
+    // 設備購入
+    function buyBuilding(index) {
+        const b = buildings[index];
+        if (senbeiCount >= b.cost) {
+            senbeiCount -= b.cost;
+            b.count++;
+            b.cost = Math.floor(b.cost * 1.15); // 次のコスト上昇
+            updateUI();
+        }
     }
 
-    // 擬似センサーアニメーション (機能 76, 83, 85)
+    // アップグレード購入
+    function buyUpgrade(index) {
+        const u = upgrades[index];
+        if (senbeiCount >= u.cost && !u.bought) {
+            senbeiCount -= u.cost;
+            u.bought = true;
+            clickPower *= u.mult;
+            updateUI();
+        }
+    }
+
+    // ゲームループ（1秒ごとに自動加算）
     setInterval(() => {
-        document.getElementById('fpsVal').textContent = Math.floor(58 + Math.random() * 4);
-        document.getElementById('compassVal').textContent = Math.floor(Math.random() * 360) + "°";
-        document.getElementById('gyroVal').textContent = `X:${(Math.random()*2-1).toFixed(1)} Y:${(Math.random()*2-1).toFixed(1)}`;
-        document.getElementById('pingVal').textContent = Math.floor(10 + Math.random() * 8) + "ms";
-    }, 1000);
+        senbeiCount += getCPS() / 10; // 0.1秒ごとに加算
+        updateUI();
+    }, 100);
 
-    // --- GPS & 地図 (機能 21~25) ---
-    let lat = 35.6812, lng = 139.7671;
-    let markers = [];
-    const map = L.map('map', { attributionControl: false }).setView([lat, lng], 14);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+    // UI更新処理
+    function updateUI() {
+        document.getElementById('count').textContent = Math.floor(senbeiCount).toLocaleString();
+        document.getElementById('cps').textContent = getCPS().toFixed(1);
 
-    navigator.geolocation.watchPosition(pos => {
-        lat = pos.coords.latitude; lng = pos.coords.longitude;
-        document.getElementById('hudLat').textContent = lat.toFixed(2);
-        document.getElementById('hudLng').textContent = lng.toFixed(2);
-    });
+        // 設備リスト生成
+        const bList = document.getElementById('buildingList');
+        bList.innerHTML = '';
+        buildings.forEach((b, i) => {
+            const card = document.createElement('div');
+            card.className = `item-card ${senbeiCount < b.cost ? 'disabled' : ''}`;
+            card.onclick = () => buyBuilding(i);
+            card.innerHTML = `
+                <div>
+                    <div class="item-name">${b.name} (${b.count}台)</div>
+                    <div class="item-desc">+${b.cps} 枚/秒</div>
+                </div>
+                <div class="item-cost">${b.cost.toLocaleString()} 🍘</div>
+            `;
+            bList.appendChild(card);
+        });
 
-    function fitMap() {
-        if(markers.length > 0) {
-            const group = new L.featureGroup(markers);
-            map.fitBounds(group.getBounds());
-        }
-    }
-
-    // --- 投稿 & ネットワーク送信 (機能 7, 8, 26, 41) ---
-    function sendReport() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 240; canvas.height = 180;
-        canvas.getContext('2d').drawImage(video, 0, 0, 240, 180);
-        const img = canvas.toDataURL('image/jpeg', 0.5);
-
-        const memo = document.getElementById('memoText').value || "メモなし";
-        const type = document.getElementById('sightingType').value;
-        const isSecret = document.getElementById('secretMode').checked;
-
-        const payload = {
-            id: Date.now(),
-            img: img,
-            lat: lat, lng: lng,
-            memo: memo, type: type,
-            sender: isSecret ? "ANONYMOUS" : "AGENT_PRO",
-            time: new Date().toLocaleTimeString()
-        };
-
-        pubnub.publish({ channel: CHANNEL, message: { type: "report", data: payload } });
-        document.getElementById('memoText').value = '';
-        log("目撃情報をアップロードしました");
-    }
-
-    // --- PubNub リスナー (機能 51~54, 70) ---
-    pubnub.addListener({
-        message: (e) => {
-            const msg = e.message;
-            if(msg.type === "report") {
-                const d = msg.data;
-                // マーカー
-                const m = L.circleMarker([d.lat, d.lng], { color: d.type==='found'?'#ffcc00':'#00ffff', radius: 7 }).addTo(map);
-                markers.push(m);
-
-                // ギャラリー
-                const gal = document.getElementById('galleryList');
-                const img = document.createElement('img');
-                img.src = d.img; img.className = 'thumb';
-                gal.insertBefore(img, gal.firstChild);
-
-                // フィード
-                const feed = document.getElementById('feedList');
-                const item = document.createElement('div');
-                item.className = 'feed-item';
-                item.innerHTML = `<b>[${d.type.toUpperCase()}]</b> ${d.time} by ${d.sender}<br>${d.memo}`;
-                feed.insertBefore(item, feed.firstChild);
-            } else if(msg.type === "chat") {
-                const box = document.getElementById('chatBox');
-                box.innerHTML += `<div><b>${msg.sender}:</b> ${msg.text}</div>`;
-                box.scrollTop = box.scrollHeight;
+        // アップグレードリスト生成
+        const uList = document.getElementById('upgradeList');
+        uList.innerHTML = '';
+        upgrades.forEach((u, i) => {
+            if (!u.bought) {
+                const card = document.createElement('div');
+                card.className = `item-card ${senbeiCount < u.cost ? 'disabled' : ''}`;
+                card.onclick = () => buyUpgrade(i);
+                card.innerHTML = `
+                    <div>
+                        <div class="item-name">${u.name}</div>
+                        <div class="item-desc">手焼きパワー ${u.mult}倍</div>
+                    </div>
+                    <div class="item-cost">${u.cost.toLocaleString()} 🍘</div>
+                `;
+                uList.appendChild(card);
             }
-        }
-    });
-
-    // --- チャット (機能 51) ---
-    function sendChat() {
-        const txt = document.getElementById('chatMsg').value;
-        if(!txt) return;
-        pubnub.publish({ channel: CHANNEL, message: { type: "chat", sender: "YOU", text: txt } });
-        document.getElementById('chatMsg').value = '';
+        });
     }
 
-    // --- タブ切り替え ---
-    function switchTab(id) {
-        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).style.display = 'block';
-        event.target.classList.add('active');
-        if(id === 'mapTab') setTimeout(() => map.invalidateSize(), 200);
-    }
-
-    // --- ユーティリティ (機能 94, 95, 96, 118) ---
-    function triggerAlarm() { alert("🚨 緊急捜索アラームを発振しました！"); }
-    function shareGPS() { navigator.clipboard.writeText(`${lat},${lng}`); alert("座標をコピーしました"); }
-    function toggleFullScreen() {
-        if(!document.fullscreenElement) document.documentElement.requestFullscreen();
-        else document.exitFullscreen();
-    }
-    function playBGM() { log("BGM再生モード (機能95)"); }
-    function speakStatus() { log("音声アナウンス (機能96)"); }
-    function exportData() { alert("全120機能ログをCSV出力しました"); }
-    function toggleGacha() { alert("🎉 ガチャ：限定ネオンテーマを獲得しました！"); }
-    function clearData() { if(confirm("全データを削除しますか？")) location.reload(); }
-    function toggleDebug() { log("デバッグモード切替"); }
-    function toggleFlash() { log("ライト機能切替"); }
+    updateUI();
 </script>
 
 </body>
