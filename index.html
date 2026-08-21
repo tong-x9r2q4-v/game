@@ -2,12 +2,10 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    
-    <!-- ★検索結果に表示させない設定★ -->
+    <!-- 検索結果に表示させない設定 -->
     <meta name="robots" content="noindex,nofollow">
-    
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>S-TRACKER PROTOCOL | PRIVATE NETWORK</title>
+    <title>SENBEI TRACKER | PRIVATE NETWORK</title>
 
     <!-- 近未来フォント Exo 2 -->
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;600;900&display=swap" rel="stylesheet">
@@ -23,10 +21,12 @@
         :root {
             --spy-red: #ff0033;
             --spy-cyan: #00ffff;
+            --spy-gold: #ffcc00;
             --spy-dark-bg: #030303;
             --spy-card-bg: #0f0f0f;
             --glow-cyan: 0 0 10px rgba(0, 255, 255, 0.6);
             --glow-red: 0 0 10px rgba(255, 0, 51, 0.6);
+            --glow-gold: 0 0 10px rgba(255, 204, 0, 0.6);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Exo 2', sans-serif; font-weight: 300; }
@@ -37,14 +37,14 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            border: 1px solid var(--spy-cyan); /* 画面外枠 */
+            border: 1px solid var(--spy-cyan);
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
         }
 
-        /* --- ヘッダー（グリッチエフェクト付き） --- */
+        /* ヘッダー */
         header {
             background: rgba(15, 15, 15, 0.9);
-            padding: 18px;
+            padding: 15px;
             text-align: center;
             border-bottom: 2px solid var(--spy-cyan);
             box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
@@ -54,14 +54,13 @@
         }
 
         header h1 {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 900;
-            letter-spacing: 4px;
+            letter-spacing: 3px;
             text-transform: uppercase;
             color: #fff;
             text-shadow: 0 0 10px #fff;
-            position: relative;
-            animation: glitch 3s infinite; /* グリッチアニメ */
+            animation: glitch 3s infinite;
         }
 
         @keyframes glitch {
@@ -86,7 +85,34 @@
             width: 100%;
         }
 
-        /* --- セクションタイトル（ネオン発光） --- */
+        /* ポイント表示パネル */
+        .point-box {
+            background: rgba(255, 204, 0, 0.1);
+            border: 1px solid var(--spy-gold);
+            padding: 10px 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            box-shadow: var(--glow-gold);
+        }
+
+        .point-title {
+            font-size: 0.85rem;
+            color: var(--spy-gold);
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .point-val {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--spy-gold);
+            text-shadow: var(--glow-gold);
+        }
+
+        /* セクションタイトル */
         .section-title {
             font-size: 0.8rem;
             color: var(--spy-cyan);
@@ -99,16 +125,16 @@
             text-shadow: var(--glow-cyan);
         }
 
-        /* 地図（Mapping） */
+        /* 地図 */
         #map {
-            height: 220px;
+            height: 200px;
             width: 100%;
             border-radius: 4px;
             border: 1px solid var(--spy-cyan);
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
         }
 
-        /* カメラと操作系 */
+        /* カメラ */
         .camera-container {
             position: relative;
             background: #000;
@@ -121,7 +147,7 @@
         video {
             width: 100%;
             display: block;
-            max-height: 300px;
+            max-height: 250px;
             object-fit: cover;
         }
 
@@ -136,22 +162,20 @@
             font-size: 0.7rem;
             color: var(--spy-red);
             font-family: monospace;
-            letter-spacing: 1px;
             text-shadow: var(--glow-red);
         }
 
-        /* 撮影ボタン（未来型） */
+        /* 撮影ボタン */
         .btn-capture {
             width: 100%;
             padding: 16px;
             background: none;
             color: var(--spy-cyan);
             border: 2px solid var(--spy-cyan);
-            border-radius: 0; /* 角を尖らせる */
             font-weight: 900;
-            font-size: 1.1rem;
+            font-size: 1rem;
             text-transform: uppercase;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             cursor: pointer;
             box-shadow: var(--glow-cyan), inset 0 0 10px rgba(0, 255, 255, 0.4);
             transition: all 0.2s;
@@ -161,10 +185,33 @@
             transform: scale(0.97);
             background: var(--spy-cyan);
             color: var(--spy-dark-bg);
-            box-shadow: 0 0 30px var(--spy-cyan);
         }
 
-        /* --- タイムライン（目撃フィード） --- */
+        /* 過去画像ギャラリー */
+        .gallery-container {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .gallery-thumb {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border: 1px solid var(--spy-cyan);
+            border-radius: 4px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .gallery-thumb:hover {
+            transform: scale(1.05);
+            box-shadow: var(--glow-cyan);
+        }
+
+        /* タイムライン */
         .feed-list {
             display: flex;
             flex-direction: column;
@@ -187,10 +234,9 @@
 
         .post-card img {
             width: 100%;
-            height: 220px;
+            height: 200px;
             object-fit: cover;
             display: block;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
         }
 
         .post-info {
@@ -206,13 +252,9 @@
             text-shadow: var(--glow-cyan);
         }
 
-        .post-time {
-            color: #ccc;
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-        }
+        .post-time { color: #ccc; font-size: 0.75rem; }
 
-        /* 地図ポップアップ画像調整 */
+        /* ポップアップ */
         .leaflet-popup-content-wrapper { background: var(--spy-card-bg); border: 1px solid var(--spy-cyan); color: #fff; }
         .leaflet-popup-tip { background: var(--spy-cyan); }
         .leaflet-popup-content img { width: 100%; border-radius: 2px; }
@@ -221,101 +263,113 @@
 <body>
 
 <header>
-    <h1>S-TRACKER</h1>
-    <p>CLASSIFIED / SPIDER NETWORK PROTOCOL</p>
+    <h1>🧸 SENBEI TRACKER</h1>
+    <p>ぬいぐるみのせんべい捜索ネットワーク</p>
 </header>
 
 <div class="container">
+    <!-- ポイント表示 -->
+    <div class="point-box">
+        <span class="point-title">🏆 獲得ポイント</span>
+        <span class="point-val"><span id="pointCount">0</span> PT</span>
+    </div>
+
     <!-- 地図セクション -->
-    <div class="section-title">GLOBAL MAPPING</div>
+    <div class="section-title">MAPPING（目撃エリア）</div>
     <div id="map"></div>
 
     <!-- カメラセクション -->
-    <div class="section-title">TARGET CAMERA</div>
+    <div class="section-title">TARGET CAMERA（せんべいを撮影）</div>
     <div class="camera-container">
         <video id="webcam" autoplay playsinline></video>
-        <div class="hud-overlay" id="hudLocation">INITIALIZING GPS...</div>
+        <div class="hud-overlay" id="hudLocation">GPS 取得中...</div>
     </div>
 
-    <button class="btn-capture" onclick="captureAndBroadcast()">UPLOAD TO NETWORK</button>
+    <button class="btn-capture" onclick="captureAndBroadcast()">📸 目撃情報を共有 (+100PT)</button>
+
+    <!-- 過去画像ログ -->
+    <div class="section-title">IMAGE LOG（過去の撮影ログ）</div>
+    <div class="gallery-container" id="galleryList"></div>
 
     <!-- フィードセクション -->
-    <div class="section-title">LIVE PROTOCOL FEED</div>
+    <div class="section-title">LIVE FEED（最新目撃情報）</div>
     <div class="feed-list" id="feedList"></div>
 </div>
 
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-    // --- PubNubの設定（デモキーを使用） ---
+    // --- PubNubの設定 ---
     const pubnub = new PubNub({
         publishKey: "demo",
         subscribeKey: "demo",
-        userId: "protocol_agent_" + Math.floor(Math.random() * 100000)
+        userId: "senbei_tracker_" + Math.floor(Math.random() * 100000)
     });
 
-    const CHANNEL_NAME = "spider_tracker_noindex_protocol_2026"; // 独自の通信部屋
+    const CHANNEL_NAME = "senbei_nuigurumi_tracker_2026";
 
-    // --- 地図（Leaflet）の初期化 ---
-    let currentLat = 35.6812; // デフォルト位置（東京）
+    // --- ポイント管理（ローカルストレージ保存） ---
+    let userPoints = parseInt(localStorage.getItem('senbei_points') || '0');
+    document.getElementById('pointCount').textContent = userPoints;
+
+    function addPoints(pt) {
+        userPoints += pt;
+        localStorage.setItem('senbei_points', userPoints);
+        document.getElementById('pointCount').textContent = userPoints;
+    }
+
+    // --- 地図の初期化 ---
+    let currentLat = 35.6812;
     let currentLng = 139.7671;
     
     const map = L.map('map', { attributionControl: false }).setView([currentLat, currentLng], 13);
 
-    // ダークモード地図タイル（CartoDB Dark Matter）
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19
     }).addTo(map);
 
-    // --- カメラとGPSのセットアップ ---
+    // --- カメラ & GPS ---
     const video = document.getElementById('webcam');
     const hudLocation = document.getElementById('hudLocation');
 
-    // 外向きカメラの起動
     navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: "environment" }, 
         audio: false 
     }).then(stream => {
         video.srcObject = stream;
     }).catch(err => {
-        hudLocation.textContent = "CAMERA ERROR";
+        hudLocation.textContent = "カメラエラー";
     });
 
-    // 高精度GPS追跡
     if ("geolocation" in navigator) {
         navigator.geolocation.watchPosition(pos => {
             currentLat = pos.coords.latitude;
             currentLng = pos.coords.longitude;
             hudLocation.textContent = `📍 ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
-            
-            // 地図移動
             map.setView([currentLat, currentLng]);
         }, err => {
-            hudLocation.textContent = "GPS ERROR";
+            hudLocation.textContent = "GPS エラー";
         });
     }
 
-    // --- リアルタイム受信処理 ---
+    // --- リアルタイム受信 ---
     pubnub.subscribe({ channels: [CHANNEL_NAME] });
     
     pubnub.addListener({
         message: (event) => {
-            const data = event.message;
-            addSightingToFeedAndMap(data);
+            addSightingToFeedAndMap(event.message);
         }
     });
 
-    // --- 撮影およびデータ配信 ---
+    // --- 撮影 ＆ 送信 ---
     function captureAndBroadcast() {
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
         
-        // 軽量化のため画像解像度を320x240に
         canvas.width = 320;
         canvas.height = 240;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // JPEG画像として保存（圧縮率40%）
         const imageData = canvas.toDataURL('image/jpeg', 0.4);
 
         const payload = {
@@ -326,46 +380,55 @@
             time: new Date().toLocaleTimeString()
         };
 
-        // クラウドへアップロード
+        // ポイント加算
+        addPoints(100);
+
+        // クラウドへ送信
         pubnub.publish({
             channel: CHANNEL_NAME,
             message: payload
         });
     }
 
-    // --- 画面への反映処理 ---
+    // --- 画面更新（地図・フィード・過去ログ） ---
     function addSightingToFeedAndMap(data) {
-        // ① 地図マーカーを追加
+        // ① 地図マーカー追加
         const circleMarker = L.circleMarker([data.lat, data.lng], {
-            color: '#00ffff', // シアン（発光効果用）
+            color: '#00ffff',
             fillColor: '#00ffff',
             fillOpacity: 0.8,
             radius: 9,
-            weight: 3,
-            className: 'glowing-marker' // 発光用CSSクラス
+            weight: 3
         }).addTo(map);
 
         circleMarker.bindPopup(`
             <div style="color:#00ffff; font-family: 'Exo 2', sans-serif;">
-                <b style="color:var(--spy-red);">🕷️ DETECTED</b><br>
+                <b style="color:var(--spy-gold);">🧸 せんべい目撃！</b><br>
                 <img src="${data.image}" style="margin-top:5px; border:1px solid var(--spy-cyan);"><br>
-                <small style="color:#fff;">TIME: ${data.time}</small>
+                <small style="color:#fff;">時間: ${data.time}</small>
             </div>
         `, { maxWidth: 200 });
 
-        // ② フィード一覧に追加
+        // ② フィード追加
         const feedList = document.getElementById('feedList');
         const card = document.createElement('div');
         card.className = 'post-card';
         card.innerHTML = `
             <img src="${data.image}">
             <div class="post-info">
-                <span class="post-location">📍 COORD: ${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}</span>
-                <span class="post-time">⏱️ TIME: ${data.time}</span>
+                <span class="post-location">📍 位置: ${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}</span>
+                <span class="post-time">⏱️ 時刻: ${data.time}</span>
             </div>
         `;
-
         feedList.insertBefore(card, feedList.firstChild);
+
+        // ③ 過去画像ログに追加
+        const galleryList = document.getElementById('galleryList');
+        const imgThumb = document.createElement('img');
+        imgThumb.src = data.image;
+        imgThumb.className = 'gallery-thumb';
+        imgThumb.onclick = () => window.open(data.image, '_blank');
+        galleryList.insertBefore(imgThumb, galleryList.firstChild);
     }
 </script>
 
