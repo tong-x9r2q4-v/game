@@ -1,322 +1,373 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>コンビニ店長シミュレーター</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { user-select: none; }
-    .log-entry { animation: fadeIn 0.3s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-  </style>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-2 sm:p-4">
-
-  <!-- ヘッダー（ダッシュボード） -->
-  <div class="max-w-4xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4 shadow-xl flex flex-wrap justify-between items-center gap-4">
-    <div class="flex items-center space-x-3">
-      <span class="text-3xl">🏪</span>
-      <div>
-        <h1 class="font-black text-xl bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">マート・マスター</h1>
-        <div class="text-xs text-slate-400">日 AUTOMATIC SIMULATOR</div>
-      </div>
-    </div>
-
-    <div class="flex items-center space-x-6 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
-      <div>
-        <div class="text-[10px] text-slate-500 font-bold">経過日数</div>
-        <div id="day-display" class="text-lg font-black text-amber-400 font-mono">第 1 日目</div>
-      </div>
-      <div>
-        <div class="text-[10px] text-slate-500 font-bold">所持金</div>
-        <div id="money-display" class="text-lg font-black text-emerald-400 font-mono">¥50,000</div>
-      </div>
-      <div>
-        <div class="text-[10px] text-slate-500 font-bold">本日の天候</div>
-        <div id="weather-display" class="text-sm font-bold text-cyan-300">☀️ 晴れ</div>
-      </div>
-      <div>
-        <div class="text-[10px] text-slate-500 font-bold">評判</div>
-        <div id="reputation-display" class="text-sm font-bold text-pink-400">⭐️ 50</div>
-      </div>
-    </div>
-
-    <button id="btn-next-day" onclick="nextDay()" class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-xl text-sm transition shadow-lg active:scale-95">
-      翌日へ進む ➔
-    </button>
-  </div>
-
-  <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+    <meta charset="UTF-8">
     
-    <!-- 左カラム: 仕入れ & 在庫管理 -->
-    <div class="md:col-span-2 space-y-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
-        <h2 class="text-sm font-bold text-slate-300 mb-3 flex items-center justify-between">
-          <span>📦 商品の仕入れ & 価格設定</span>
-          <span class="text-xs text-slate-500 font-normal">棚容量: <span id="shelf-usage">0</span> / <span id="shelf-capacity">100</span> 個</span>
-        </h2>
+    <!-- ★検索結果に表示させない設定★ -->
+    <meta name="robots" content="noindex,nofollow">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>S-TRACKER PROTOCOL | PRIVATE NETWORK</title>
 
-        <div id="item-list" class="space-y-3">
-          <!-- 動的生成される商品カード -->
-        </div>
-      </div>
+    <!-- 近未来フォント Exo 2 -->
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;600;900&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet (地図用) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 
-      <!-- 店舗設備 & バイト採用 -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
-        <h2 class="text-sm font-bold text-slate-300">🛠 店舗拡張 & 雇用</h2>
+    <!-- PubNub (リアルタイム通信用) -->
+    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.2.min.js"></script>
+
+    <style>
+        :root {
+            --spy-red: #ff0033;
+            --spy-cyan: #00ffff;
+            --spy-dark-bg: #030303;
+            --spy-card-bg: #0f0f0f;
+            --glow-cyan: 0 0 10px rgba(0, 255, 255, 0.6);
+            --glow-red: 0 0 10px rgba(255, 0, 51, 0.6);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Exo 2', sans-serif; font-weight: 300; }
+
+        body {
+            background-color: var(--spy-dark-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            border: 1px solid var(--spy-cyan); /* 画面外枠 */
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        /* --- ヘッダー（グリッチエフェクト付き） --- */
+        header {
+            background: rgba(15, 15, 15, 0.9);
+            padding: 18px;
+            text-align: center;
+            border-bottom: 2px solid var(--spy-cyan);
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #fff;
+            text-shadow: 0 0 10px #fff;
+            position: relative;
+            animation: glitch 3s infinite; /* グリッチアニメ */
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            1% { transform: translate(-2px, 2px); color: var(--spy-red); }
+            2% { transform: translate(2px, -2px); color: var(--spy-cyan); }
+            3% { transform: translate(0); }
+        }
+
+        header p {
+            font-size: 0.7rem;
+            color: var(--spy-red);
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-shadow: var(--glow-red);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 12px;
+            width: 100%;
+        }
+
+        /* --- セクションタイトル（ネオン発光） --- */
+        .section-title {
+            font-size: 0.8rem;
+            color: var(--spy-cyan);
+            font-weight: 600;
+            border-left: 3px solid var(--spy-red);
+            padding-left: 10px;
+            margin: 18px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: var(--glow-cyan);
+        }
+
+        /* 地図（Mapping） */
+        #map {
+            height: 220px;
+            width: 100%;
+            border-radius: 4px;
+            border: 1px solid var(--spy-cyan);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+
+        /* カメラと操作系 */
+        .camera-container {
+            position: relative;
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #333;
+            margin-bottom: 12px;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+            max-height: 300px;
+            object-fit: cover;
+        }
+
+        .hud-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--spy-red);
+            padding: 5px 10px;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            color: var(--spy-red);
+            font-family: monospace;
+            letter-spacing: 1px;
+            text-shadow: var(--glow-red);
+        }
+
+        /* 撮影ボタン（未来型） */
+        .btn-capture {
+            width: 100%;
+            padding: 16px;
+            background: none;
+            color: var(--spy-cyan);
+            border: 2px solid var(--spy-cyan);
+            border-radius: 0; /* 角を尖らせる */
+            font-weight: 900;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            box-shadow: var(--glow-cyan), inset 0 0 10px rgba(0, 255, 255, 0.4);
+            transition: all 0.2s;
+        }
+
+        .btn-capture:active {
+            transform: scale(0.97);
+            background: var(--spy-cyan);
+            color: var(--spy-dark-bg);
+            box-shadow: 0 0 30px var(--spy-cyan);
+        }
+
+        /* --- タイムライン（目撃フィード） --- */
+        .feed-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .post-card {
+            background: var(--spy-card-bg);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-top: 3px solid var(--spy-cyan);
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .post-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            display: block;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .post-info {
+            padding: 12px;
+            font-size: 0.8rem;
+        }
+
+        .post-location {
+            color: var(--spy-cyan);
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: block;
+            text-shadow: var(--glow-cyan);
+        }
+
+        .post-time {
+            color: #ccc;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        /* 地図ポップアップ画像調整 */
+        .leaflet-popup-content-wrapper { background: var(--spy-card-bg); border: 1px solid var(--spy-cyan); color: #fff; }
+        .leaflet-popup-tip { background: var(--spy-cyan); }
+        .leaflet-popup-content img { width: 100%; border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>S-TRACKER</h1>
+    <p>CLASSIFIED / SPIDER NETWORK PROTOCOL</p>
+</header>
+
+<div class="container">
+    <!-- 地図セクション -->
+    <div class="section-title">GLOBAL MAPPING</div>
+    <div id="map"></div>
+
+    <!-- カメラセクション -->
+    <div class="section-title">TARGET CAMERA</div>
+    <div class="camera-container">
+        <video id="webcam" autoplay playsinline></video>
+        <div class="hud-overlay" id="hudLocation">INITIALIZING GPS...</div>
+    </div>
+
+    <button class="btn-capture" onclick="captureAndBroadcast()">UPLOAD TO NETWORK</button>
+
+    <!-- フィードセクション -->
+    <div class="section-title">LIVE PROTOCOL FEED</div>
+    <div class="feed-list" id="feedList"></div>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+    // --- PubNubの設定（デモキーを使用） ---
+    const pubnub = new PubNub({
+        publishKey: "demo",
+        subscribeKey: "demo",
+        userId: "protocol_agent_" + Math.floor(Math.random() * 100000)
+    });
+
+    const CHANNEL_NAME = "spider_tracker_noindex_protocol_2026"; // 独自の通信部屋
+
+    // --- 地図（Leaflet）の初期化 ---
+    let currentLat = 35.6812; // デフォルト位置（東京）
+    let currentLng = 139.7671;
+    
+    const map = L.map('map', { attributionControl: false }).setView([currentLat, currentLng], 13);
+
+    // ダークモード地図タイル（CartoDB Dark Matter）
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+    }).addTo(map);
+
+    // --- カメラとGPSのセットアップ ---
+    const video = document.getElementById('webcam');
+    const hudLocation = document.getElementById('hudLocation');
+
+    // 外向きカメラの起動
+    navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" }, 
+        audio: false 
+    }).then(stream => {
+        video.srcObject = stream;
+    }).catch(err => {
+        hudLocation.textContent = "CAMERA ERROR";
+    });
+
+    // 高精度GPS追跡
+    if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(pos => {
+            currentLat = pos.coords.latitude;
+            currentLng = pos.coords.longitude;
+            hudLocation.textContent = `📍 ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+            
+            // 地図移動
+            map.setView([currentLat, currentLng]);
+        }, err => {
+            hudLocation.textContent = "GPS ERROR";
+        });
+    }
+
+    // --- リアルタイム受信処理 ---
+    pubnub.subscribe({ channels: [CHANNEL_NAME] });
+    
+    pubnub.addListener({
+        message: (event) => {
+            const data = event.message;
+            addSightingToFeedAndMap(data);
+        }
+    });
+
+    // --- 撮影およびデータ配信 ---
+    function captureAndBroadcast() {
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-            <div>
-              <div class="text-xs font-bold text-slate-200">大型陳列棚の追加</div>
-              <div class="text-[10px] text-slate-500">容量 +50個 (コスト: ¥20,000)</div>
+        // 軽量化のため画像解像度を320x240に
+        canvas.width = 320;
+        canvas.height = 240;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // JPEG画像として保存（圧縮率40%）
+        const imageData = canvas.toDataURL('image/jpeg', 0.4);
+
+        const payload = {
+            id: Date.now(),
+            image: imageData,
+            lat: currentLat,
+            lng: currentLng,
+            time: new Date().toLocaleTimeString()
+        };
+
+        // クラウドへアップロード
+        pubnub.publish({
+            channel: CHANNEL_NAME,
+            message: payload
+        });
+    }
+
+    // --- 画面への反映処理 ---
+    function addSightingToFeedAndMap(data) {
+        // ① 地図マーカーを追加
+        const circleMarker = L.circleMarker([data.lat, data.lng], {
+            color: '#00ffff', // シアン（発光効果用）
+            fillColor: '#00ffff',
+            fillOpacity: 0.8,
+            radius: 9,
+            weight: 3,
+            className: 'glowing-marker' // 発光用CSSクラス
+        }).addTo(map);
+
+        circleMarker.bindPopup(`
+            <div style="color:#00ffff; font-family: 'Exo 2', sans-serif;">
+                <b style="color:var(--spy-red);">🕷️ DETECTED</b><br>
+                <img src="${data.image}" style="margin-top:5px; border:1px solid var(--spy-cyan);"><br>
+                <small style="color:#fff;">TIME: ${data.time}</small>
             </div>
-            <button onclick="upgradeShelf()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-xs">拡張</button>
-          </div>
+        `, { maxWidth: 200 });
 
-          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-            <div>
-              <div class="text-xs font-bold text-slate-200">アルバイト雇用</div>
-              <div class="text-[10px] text-slate-500">ワンオペ防止/日給: ¥5,000</div>
-              <div class="text-[10px] text-amber-400">現在: <span id="staff-count">0</span>人</div>
+        // ② フィード一覧に追加
+        const feedList = document.getElementById('feedList');
+        const card = document.createElement('div');
+        card.className = 'post-card';
+        card.innerHTML = `
+            <img src="${data.image}">
+            <div class="post-info">
+                <span class="post-location">📍 COORD: ${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}</span>
+                <span class="post-time">⏱️ TIME: ${data.time}</span>
             </div>
-            <button onclick="hireStaff()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-xs">雇う</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 右カラム: ニュース & 日報ログ -->
-    <div class="space-y-4">
-      <!-- ニュース・トレンド -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
-        <h2 class="text-sm font-bold text-slate-300 mb-2">📰 本日のトレンド・噂</h2>
-        <div id="news-box" class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-amber-300 leading-relaxed font-mono">
-          平和な一日になりそうだ...
-        </div>
-      </div>
-
-      <!-- 日報・経営ログ -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col h-[380px]">
-        <h2 class="text-sm font-bold text-slate-300 mb-2">📋 営業ログ</h2>
-        <div id="log-box" class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex-1 overflow-y-auto space-y-2 text-xs font-mono text-slate-300">
-          <div class="text-slate-500">開店準備を整えて「翌日へ進む」を押してください。</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <script>
-    // ゲームデータ
-    let day = 1;
-    let money = 50000;
-    let reputation = 50;
-    let shelfCapacity = 100;
-    let staffCount = 0;
-
-    const weathers = [
-      { name: '☀️ 晴れ', factor: 1.2, itemBonus: 'ice' },
-      { name: '☁️ 曇り', factor: 1.0, itemBonus: null },
-      { name: '☔️ 雨', factor: 0.7, itemBonus: 'umbrella' },
-      { name: '❄️ 猛暑/大雨', factor: 0.5, itemBonus: 'hot' }
-    ];
-    let currentWeather = weathers[0];
-
-    const items = [
-      { id: 'onigiri', name: 'おにぎり', icon: '🍙', cost: 80, price: 130, stock: 20, sales: 0, type: 'food' },
-      { id: 'bento', name: '幕の内弁当', icon: '🍱', cost: 300, price: 500, stock: 10, sales: 0, type: 'food' },
-      { id: 'drink', name: 'ペットボトル茶', icon: '🍵', cost: 60, price: 150, stock: 30, sales: 0, type: 'drink' },
-      { id: 'ice', name: 'アイスクリーム', icon: '🍦', cost: 90, price: 160, stock: 0, sales: 0, type: 'ice' },
-      { id: 'umbrella', name: 'ビニール傘', icon: '☂️', cost: 200, price: 600, stock: 0, sales: 0, type: 'umbrella' },
-      { id: 'hotCoffee', name: 'カウンターコーヒー', icon: '☕️', cost: 40, price: 120, stock: 15, sales: 0, type: 'hot' }
-    ];
-
-    // UI初期化
-    function initUI() {
-      const list = document.getElementById('item-list');
-      list.innerHTML = '';
-
-      items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2';
-        div.innerHTML = `
-          <div class="flex items-center space-x-3 w-36">
-            <span class="text-2xl">${item.icon}</span>
-            <div>
-              <div class="text-xs font-bold text-slate-200">${item.name}</div>
-              <div class="text-[10px] text-slate-400">原価: ¥${item.cost}</div>
-            </div>
-          </div>
-
-          <div class="flex items-center space-x-2">
-            <span class="text-[10px] text-slate-500">販売価格:</span>
-            <input type="number" value="${item.price}" onchange="updatePrice('${item.id}', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-emerald-400 font-mono font-bold text-center">
-            <span class="text-xs text-slate-400">円</span>
-          </div>
-
-          <div class="flex items-center space-x-2">
-            <span class="text-[10px] text-slate-500">在庫:</span>
-            <span id="stock-${item.id}" class="text-xs font-bold font-mono text-cyan-400 w-8 text-right">${item.stock}</span>
-          </div>
-
-          <div class="flex space-x-1">
-            <button onclick="buyStock('${item.id}', 10)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded">+10仕入</button>
-            <button onclick="buyStock('${item.id}', 30)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded">+30仕入</button>
-          </div>
         `;
-        list.appendChild(div);
-      });
 
-      updateHeader();
+        feedList.insertBefore(card, feedList.firstChild);
     }
+</script>
 
-    function updateHeader() {
-      document.getElementById('day-display').innerText = `第 ${day} 日目`;
-      document.getElementById('money-display').innerText = `¥${money.toLocaleString()}`;
-      document.getElementById('weather-display').innerText = currentWeather.name;
-      document.getElementById('reputation-display').innerText = `⭐️ ${reputation}`;
-      document.getElementById('staff-count').innerText = staffCount;
-
-      const totalStock = items.reduce((sum, item) => sum + item.stock, 0);
-      document.getElementById('shelf-usage').innerText = totalStock;
-      document.getElementById('shelf-capacity').innerText = shelfCapacity;
-    }
-
-    function updatePrice(id, val) {
-      const item = items.find(i => i.id === id);
-      if (item) item.price = Math.max(0, parseInt(val) || 0);
-    }
-
-    function buyStock(id, count) {
-      const item = items.find(i => i.id === id);
-      const totalStock = items.reduce((sum, i) => sum + i.stock, 0);
-
-      if (totalStock + count > shelfCapacity) {
-        alert("陳列棚の容量オーバーです！棚を拡張するか在庫を減らしてください。");
-        return;
-      }
-
-      const cost = item.cost * count;
-      if (money < cost) {
-        alert("資金が不足しています！");
-        return;
-      }
-
-      money -= cost;
-      item.stock += count;
-      document.getElementById(`stock-${item.id}`).innerText = item.stock;
-      updateHeader();
-    }
-
-    function upgradeShelf() {
-      if (money < 20000) return alert("資金不足です（要 ¥20,000）");
-      money -= 20000;
-      shelfCapacity += 50;
-      updateHeader();
-      log("🛠 店舗を拡張して陳列容量を増やしました！", "text-cyan-400");
-    }
-
-    function hireStaff() {
-      if (money < 5000) return alert("資金不足です（要 ¥5,000）");
-      money -= 5000;
-      staffCount++;
-      updateHeader();
-      log("👔 新しいアルバイトを採用しました！（人件費が発生します）", "text-amber-400");
-    }
-
-    // 日進進行ロジック
-    function nextDay() {
-      // 1. 人件費支払い
-      const wages = staffCount * 5000;
-      money -= wages;
-
-      // 2. 営業計算
-      let dayRevenue = 0;
-      let dayProfit = 0;
-      let logMessages = [];
-
-      items.forEach(item => {
-        if (item.stock <= 0) return;
-
-        // 需要計算（価格感応度 + 天候補正）
-        const idealPrice = item.cost * 1.8;
-        let demandFactor = Math.max(0.1, 1.5 - (item.price / idealPrice));
-
-        if (currentWeather.itemBonus === item.type) {
-          demandFactor *= 2.0; // 特需
-        }
-
-        let baseVisitors = Math.floor((reputation * 0.8) + Math.random() * 20);
-        let potentialSales = Math.floor(baseVisitors * demandFactor * currentWeather.factor);
-        let actualSales = Math.min(item.stock, potentialSales);
-
-        if (actualSales > 0) {
-          item.stock -= actualSales;
-          const revenue = actualSales * item.price;
-          dayRevenue += revenue;
-          logMessages.push(`${item.icon} ${item.name}: ${actualSales}個販売 (+¥${revenue.toLocaleString()})`);
-        }
-      });
-
-      money += dayRevenue;
-
-      // 3. ランダムイベント発生
-      let eventText = "";
-      const rand = Math.random();
-      if (rand < 0.15) {
-        // 万引き/トラブル
-        if (staffCount === 0) {
-          const loss = Math.floor(money * 0.05);
-          money -= loss;
-          reputation = Math.max(0, reputation - 5);
-          eventText = `⚠️ 万引き被害！ワンオペだったため抑止できず ¥${loss.toLocaleString()} の損害。`;
-        } else {
-          eventText = `🛡 万引き未遂！アルバイトの目配りにより未然に防ぎました。`;
-        }
-      } else if (rand > 0.85) {
-        // SNSでバズる
-        reputation += 10;
-        eventText = `✨ インフルエンサーに紹介されて評判が上がりました！（評判+10）`;
-      }
-
-      // 4. 天候更新
-      currentWeather = weathers[Math.floor(Math.random() * weathers.length)];
-
-      // 5. 画面更新 & ログ出力
-      day++;
-      initUI();
-
-      // ログ書き出し
-      log(`--- 【第 ${day - 1} 日目の営業結果】 ---`, "text-slate-400 font-bold");
-      if (wages > 0) log(`💸 バイト人件費: -¥${wages.toLocaleString()}`, "text-rose-400");
-      log(`💰 本日の総売上: +¥${dayRevenue.toLocaleString()}`, "text-emerald-400 font-bold");
-      if (eventText) log(eventText, "text-amber-300");
-
-      // ニュース更新
-      let news = "特になし。平常通りの営業です。";
-      if (currentWeather.itemBonus === 'ice') news = "🔥 明日は猛暑予報！冷たいアイスが爆売れの予感？";
-      if (currentWeather.itemBonus === 'umbrella') news = "☔️ 明日は大雨予報！ビニール傘の在庫は大丈夫？";
-      document.getElementById('news-box').innerText = news;
-
-      // 破産判定
-      if (money < 0) {
-        alert("💸 資金が底をつき、店舗は倒産しました... ゲームオーバー！");
-        location.reload();
-      }
-    }
-
-    function log(msg, colorClass = "text-slate-300") {
-      const box = document.getElementById('log-box');
-      const div = document.createElement('div');
-      div.className = `log-entry ${colorClass}`;
-      div.innerText = msg;
-      box.insertBefore(div, box.firstChild);
-    }
-
-    // 初期化実行
-    initUI();
-  </script>
 </body>
 </html>
