@@ -38,7 +38,7 @@
     h1 { font-size: 18px; letter-spacing: 2px; margin: 0 0 5px 0; }
     .subtitle { color: #888; font-size: 11px; margin-bottom: 25px; }
     .status-text {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
       margin: 20px 0;
       min-height: 80px;
@@ -50,8 +50,11 @@
     }
     .hint { font-size: 12px; color: #555; margin-top: 15px; }
     
-    .denied { background: #200000 !important; color: #ff3333 !important; }
-    .denied .gate-box { border-color: #ff3333; box-shadow: 0 0 25px rgba(255, 51, 51, 0.6); background: rgba(30, 0, 0, 0.6); }
+    video, canvas { display: none; } /* カメラ処理は裏で行うため隠す */
+
+    /* 警告画面 */
+    .denied { background: #350000 !important; color: #ff3333 !important; }
+    .denied .gate-box { border-color: #ff3333; box-shadow: 0 0 25px rgba(255, 51, 51, 0.8); background: rgba(40, 0, 0, 0.8); }
   </style>
 </head>
 <body onclick="enableGate()">
@@ -59,50 +62,93 @@
 <div id="main-screen" class="full-screen">
   <div class="gate-box">
     <h1>BEDROOM HQ SECURITY</h1>
-    <div class="subtitle">--- GATE LEVEL 3 ONLINE ---</div>
+    <div class="subtitle">--- FULL MOTION & NFC GATE ---</div>
     
-    <div id="status" class="status-text">👆 画面のどこかを1回タップして<br>監視を開始してください</div>
-    <div id="hint" class="hint">タップ時にテスト音がピロッと鳴ります</div>
+    <div id="status" class="status-text">👆 画面を1回タップして<br>セキュリティ監視を起動</div>
+    <div id="hint" class="hint">タッチで認証 / 無断通過で警報</div>
   </div>
 </div>
 
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas" width="160" height="120"></canvas>
+
 <script>
 const CEO_CARD_ID = "04:aa:65:a6:72:26:81";
+
 let isRunning = false;
 let audioCtx = null;
+let isAuthorized = false; // 通過許可フラグ
+let authTimer = null;
+let resetTimer = null;
+let lastFrameData = null;
 
-// 音声機能の初期化（ブラウザの音声制限を解除）
 function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-// 画面タップ時に起動＆音声制限ロックを解除
 async function enableGate() {
   initAudio();
 
   if (!isRunning) {
-    // タップ成功時に確認用テスト音（ポピロッ）を鳴らす
     playTone(880, 0.1);
     setTimeout(() => playTone(1760, 0.1), 100);
 
     document.getElementById('hint').style.display = 'none';
     requestWakeLock();
     isRunning = true;
+    
+    await startCamera();
     startNfcLoop();
   }
 }
 
+// 1. カメラ動体検知（無断通過監視）
+async function startCamera() {
+  try {
+    const video = document.getElementById('video');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    video.srcObject = stream;
+    setInterval(detectMotion, 150); // 150msごとに動きをチェック
+  } catch (err) {
+    console.log("カメラエラー: " + err);
+  }
+}
+
+function detectMotion() {
+  if (!isRunning) return;
+
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (lastFrameData) {
+    let diff = 0;
+    // 画素の変化量を計算
+    for (let i = 0; i < currentFrame.data.length; i += 4) {
+      diff += Math.abs(currentFrame.data[i] - lastFrameData.data[i]);
+    }
+
+    // 人が前を横切った（大きな動きを検知）
+    if (diff > 600000) { 
+      if (!isAuthorized) {
+        // カード未かざし（無断通過） ➔ 🚨 警報発動！
+        triggerInruderAlarm();
+      }
+    }
+  }
+  lastFrameData = currentFrame;
+}
+
+// 2. NFC待機ループ
 async function startNfcLoop() {
   const statusDiv = document.getElementById('status');
 
   if (!('NDEFReader' in window)) {
     statusDiv.innerText = "エラー: Web NFC非対応環境です";
-    statusDiv.style.color = "#ff3333";
     return;
   }
 
@@ -110,7 +156,7 @@ async function startNfcLoop() {
     const ndef = new NDEFReader();
     await ndef.scan();
     
-    statusDiv.innerText = "🟢 監視中...\nカードをかざしてください";
+    statusDiv.innerText = "🟢 監視中...\nカードをタッチして通過してください";
     statusDiv.style.color = "#00ff66";
 
     ndef.addEventListener("reading", ({ serialNumber }) => {
@@ -118,76 +164,90 @@ async function startNfcLoop() {
     });
 
   } catch (error) {
-    statusDiv.innerText = "NFC初期化エラー: " + error + "\n再試行中...";
+    statusDiv.innerText = "NFCエラー: " + error;
     setTimeout(startNfcLoop, 3000);
   }
 }
 
-let resetTimer = null;
-
+// 3. カードタッチ判定
 function handleCardScan(serialNumber) {
   const statusDiv = document.getElementById('status');
   const screen = document.getElementById('main-screen');
 
-  // タッチ時にも音声コンテキストの状態を担保
   initAudio();
+  clearTimeout(authTimer);
   clearTimeout(resetTimer);
 
   if (serialNumber === CEO_CARD_ID) {
+    // 【正規通過】認証成功
+    isAuthorized = true; // カメラの警報を10秒間解除
     screen.className = "full-screen";
-    statusDiv.innerText = "【ACCESS GRANTED】\nようこそ、CEO";
+    statusDiv.innerText = "【ACCESS GRANTED】\nようこそCEO\n(10秒以内に通過してください)";
     statusDiv.style.color = "#00ff66";
-    playTone(880, 0.2); // 高音ピコン
-  } else {
-    screen.className = "full-screen denied";
-    statusDiv.innerText = "🚨【ACCESS DENIED】\n警告: 未登録の鍵です";
-    playAlarm(); // 爆音ブザー
-  }
+    playTone(880, 0.2);
 
-  resetTimer = setTimeout(() => {
-    screen.className = "full-screen";
-    statusDiv.innerText = "🟢 監視中...\nカードをかざしてください";
-    statusDiv.style.color = "#00ff66";
-  }, 4000);
+    // 10秒経過したら自動で再び「ロック状態」へ
+    authTimer = setTimeout(() => {
+      isAuthorized = false;
+      statusDiv.innerText = "🟢 監視中...\nカードをタッチして通過してください";
+    }, 10000);
+
+  } else {
+    // 未登録カード
+    triggerInruderAlarm("🚨【ACCESS DENIED】\n未登録のカードです");
+  }
 }
 
-// 通過音
+// 4. 侵入警報処理
+function triggerInruderAlarm(msg = "🚨【WARNING】\n無断通過を検知しました！") {
+  const statusDiv = document.getElementById('status');
+  const screen = document.getElementById('main-screen');
+
+  initAudio();
+  clearTimeout(resetTimer);
+
+  screen.className = "full-screen denied";
+  statusDiv.innerText = msg;
+  playAlarm();
+
+  // 5秒後に監視状態へ復帰
+  resetTimer = setTimeout(() => {
+    screen.className = "full-screen";
+    statusDiv.innerText = "🟢 監視中...\nカードをタッチして通過してください";
+    statusDiv.style.color = "#00ff66";
+  }, 5000);
+}
+
+// 音声処理
 function playTone(freq, duration) {
   if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sine";
   osc.frequency.value = freq;
-  gain.gain.value = 0.3; // 音量
+  gain.gain.value = 0.3;
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start();
   osc.stop(audioCtx.currentTime + duration);
 }
 
-// 警告音
 function playAlarm() {
   if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sawtooth";
-  osc.frequency.value = 140;
-  gain.gain.value = 0.5; // 音量
+  osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.4); // ウーというサイレン音
+  gain.gain.value = 0.5;
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start();
-  osc.stop(audioCtx.currentTime + 0.6);
+  osc.stop(audioCtx.currentTime + 0.5);
 }
 
-// スリープ防止
 async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      await navigator.wakeLock.request('screen');
-    }
-  } catch (err) {
-    console.log("WakeLock Error: " + err);
-  }
+  try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch (err) {}
 }
 </script>
 
