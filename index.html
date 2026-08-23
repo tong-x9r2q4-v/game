@@ -3,79 +3,94 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BEDROOM HEADQUARTERS GATE</title>
+  <title>BEDROOM HQ SECURITY GATE</title>
   <style>
-    body {
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
       background: #05050a;
       color: #00ff66;
       font-family: 'Courier New', monospace;
       text-align: center;
+      user-select: none;
+    }
+    .full-screen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      box-sizing: border-box;
       padding: 20px;
-      margin: 0;
       transition: background 0.3s;
     }
     .gate-box {
       border: 2px solid #00ff66;
       border-radius: 12px;
       padding: 30px;
-      margin: 40px auto;
+      width: 90%;
       max-width: 400px;
       box-shadow: 0 0 20px rgba(0, 255, 102, 0.2);
       background: rgba(0, 20, 10, 0.6);
     }
-    h1 { font-size: 18px; letter-spacing: 2px; margin-bottom: 5px; }
+    h1 { font-size: 18px; letter-spacing: 2px; margin: 0 0 5px 0; }
     .subtitle { color: #888; font-size: 11px; margin-bottom: 25px; }
     .status-text {
       font-size: 22px;
       font-weight: bold;
-      margin: 30px 0;
-      min-height: 60px;
+      margin: 20px 0;
+      min-height: 80px;
       white-space: pre-wrap;
       line-height: 1.4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    button {
-      background: #00ff66;
-      color: #000;
-      font-size: 16px;
-      font-weight: bold;
-      padding: 14px 28px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      box-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
-    }
-    /* 未登録カード（侵入者）警告画面 */
-    .denied {
-      background: #200000 !important;
-      color: #ff3333 !important;
-    }
-    .denied .gate-box {
-      border-color: #ff3333;
-      box-shadow: 0 0 25px rgba(255, 51, 51, 0.6);
-      background: rgba(30, 0, 0, 0.6);
-    }
+    .hint { font-size: 12px; color: #555; margin-top: 15px; }
+    
+    /* 侵入者警告スタイル */
+    .denied { background: #200000 !important; color: #ff3333 !important; }
+    .denied .gate-box { border-color: #ff3333; box-shadow: 0 0 25px rgba(255, 51, 51, 0.6); background: rgba(30, 0, 0, 0.6); }
   </style>
 </head>
-<body>
+<body onclick="enableGate()">
 
+<div id="main-screen" class="full-screen">
   <div class="gate-box">
     <h1>BEDROOM HQ SECURITY</h1>
     <div class="subtitle">--- GATE LEVEL 3 ONLINE ---</div>
     
-    <button onclick="startGate()">ゲート監視スタート</button>
-    
-    <div id="status" class="status-text">ボタンを押して監視を起動</div>
+    <div id="status" class="status-text">👆 画面のどこかを1回タップして<br>監視を開始してください</div>
+    <div id="hint" class="hint">1度起動すれば全自動で待機します</div>
   </div>
+</div>
 
 <script>
-// 🔑 設定されたCEOマスターID
 const CEO_CARD_ID = "04:aa:65:a6:72:26:81";
+let isRunning = false;
 
-async function startGate() {
-  const statusDiv = document.getElementById('status');
+// 画面のどこかを1回タップしたら永久スタート
+async function enableGate() {
+  if (isRunning) return;
   
+  const statusDiv = document.getElementById('status');
+  document.getElementById('hint').style.display = 'none';
+
+  // 画面のスリープを防止（常時オン）
+  requestWakeLock();
+
+  // NFCループ開始
+  isRunning = true;
+  startNfcLoop();
+}
+
+async function startNfcLoop() {
+  const statusDiv = document.getElementById('status');
+
   if (!('NDEFReader' in window)) {
-    statusDiv.innerText = "エラー: Web NFC非対応環境です\n(Android Chromeで開いてください)";
+    statusDiv.innerText = "エラー: Web NFC非対応環境です";
     statusDiv.style.color = "#ff3333";
     return;
   }
@@ -83,51 +98,72 @@ async function startGate() {
   try {
     const ndef = new NDEFReader();
     await ndef.scan();
+    
     statusDiv.innerText = "🟢 監視中...\nカードをかざしてください";
     statusDiv.style.color = "#00ff66";
 
     ndef.addEventListener("reading", ({ serialNumber }) => {
-      // 登録IDと一致するか判定
-      if (serialNumber === CEO_CARD_ID) {
-        // CEOカード検出
-        document.body.className = "";
-        statusDiv.innerText = "【ACCESS GRANTED】\nようこそ、CEO";
-        statusDiv.style.color = "#00ff66";
-        playTone(880, 0.2); // 高音ピコン
-      } else {
-        // 未登録カード検出
-        document.body.className = "denied";
-        statusDiv.innerText = "🚨【ACCESS DENIED】\n警告: 未登録の鍵です";
-        playAlarm(); // ブザー爆音
-      }
+      handleCardScan(serialNumber);
     });
+
+    // エラーが起きても勝手に再起動するイベント
+    ndef.addEventListener("readingerror", () => {
+      console.log("読み取り失敗、再試行中...");
+    });
+
   } catch (error) {
-    statusDiv.innerText = "エラー: " + error;
-    statusDiv.style.color = "#ff3333";
+    statusDiv.innerText = "NFC初期化エラー: " + error + "\n再試行中...";
+    // エラーが起きたら3秒後に自動でやり直す
+    setTimeout(startNfcLoop, 3000);
   }
 }
 
-// 通過許可音（高音ピポッ）
-function playTone(freq, duration) {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  osc.type = "sine";
-  osc.frequency.value = freq;
-  osc.connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + duration);
+let resetTimer = null;
+
+function handleCardScan(serialNumber) {
+  const statusDiv = document.getElementById('status');
+  const screen = document.getElementById('main-screen');
+
+  clearTimeout(resetTimer);
+
+  if (serialNumber === CEO_CARD_ID) {
+    // CEO（通過許可）
+    screen.className = "full-screen";
+    statusDiv.innerText = "【ACCESS GRANTED】\nようこそ、CEO";
+    statusDiv.style.color = "#00ff66";
+    playTone(880, 0.2);
+  } else {
+    // 侵入者（拒否）
+    screen.className = "full-screen denied";
+    statusDiv.innerText = "🚨【ACCESS DENIED】\n警告: 未登録の鍵です";
+    playAlarm();
+  }
+
+  // 4秒後に自動で元の「🟢 監視中」画面に戻す
+  resetTimer = setTimeout(() => {
+    screen.className = "full-screen";
+    statusDiv.innerText = "🟢 監視中...\nカードをかざしてください";
+    statusDiv.style.color = "#00ff66";
+  }, 4000);
 }
 
-// 侵入者ブザー（低音ブー！）
-function playAlarm() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  osc.type = "sawtooth";
-  osc.frequency.value = 140;
-  osc.connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + 0.6);
+// スリープ防止（画面を消さない）
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      await navigator.wakeLock.request('screen');
+    }
+  } catch (err) {
+    console.log("WakeLock Error: " + err);
+  }
 }
+
+// 画面切り替え時にスリープ防止を再保持
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === 'visible') {
+    requestWakeLock();
+  }
+});
 </script>
 
 </body>
