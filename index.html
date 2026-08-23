@@ -50,7 +50,6 @@
     }
     .hint { font-size: 12px; color: #555; margin-top: 15px; }
     
-    /* 侵入者警告スタイル */
     .denied { background: #200000 !important; color: #ff3333 !important; }
     .denied .gate-box { border-color: #ff3333; box-shadow: 0 0 25px rgba(255, 51, 51, 0.6); background: rgba(30, 0, 0, 0.6); }
   </style>
@@ -63,27 +62,39 @@
     <div class="subtitle">--- GATE LEVEL 3 ONLINE ---</div>
     
     <div id="status" class="status-text">👆 画面のどこかを1回タップして<br>監視を開始してください</div>
-    <div id="hint" class="hint">1度起動すれば全自動で待機します</div>
+    <div id="hint" class="hint">タップ時にテスト音がピロッと鳴ります</div>
   </div>
 </div>
 
 <script>
 const CEO_CARD_ID = "04:aa:65:a6:72:26:81";
 let isRunning = false;
+let audioCtx = null;
 
-// 画面のどこかを1回タップしたら永久スタート
+// 音声機能の初期化（ブラウザの音声制限を解除）
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+// 画面タップ時に起動＆音声制限ロックを解除
 async function enableGate() {
-  if (isRunning) return;
-  
-  const statusDiv = document.getElementById('status');
-  document.getElementById('hint').style.display = 'none';
+  initAudio();
 
-  // 画面のスリープを防止（常時オン）
-  requestWakeLock();
+  if (!isRunning) {
+    // タップ成功時に確認用テスト音（ポピロッ）を鳴らす
+    playTone(880, 0.1);
+    setTimeout(() => playTone(1760, 0.1), 100);
 
-  // NFCループ開始
-  isRunning = true;
-  startNfcLoop();
+    document.getElementById('hint').style.display = 'none';
+    requestWakeLock();
+    isRunning = true;
+    startNfcLoop();
+  }
 }
 
 async function startNfcLoop() {
@@ -106,14 +117,8 @@ async function startNfcLoop() {
       handleCardScan(serialNumber);
     });
 
-    // エラーが起きても勝手に再起動するイベント
-    ndef.addEventListener("readingerror", () => {
-      console.log("読み取り失敗、再試行中...");
-    });
-
   } catch (error) {
     statusDiv.innerText = "NFC初期化エラー: " + error + "\n再試行中...";
-    // エラーが起きたら3秒後に自動でやり直す
     setTimeout(startNfcLoop, 3000);
   }
 }
@@ -124,22 +129,21 @@ function handleCardScan(serialNumber) {
   const statusDiv = document.getElementById('status');
   const screen = document.getElementById('main-screen');
 
+  // タッチ時にも音声コンテキストの状態を担保
+  initAudio();
   clearTimeout(resetTimer);
 
   if (serialNumber === CEO_CARD_ID) {
-    // CEO（通過許可）
     screen.className = "full-screen";
     statusDiv.innerText = "【ACCESS GRANTED】\nようこそ、CEO";
     statusDiv.style.color = "#00ff66";
-    playTone(880, 0.2);
+    playTone(880, 0.2); // 高音ピコン
   } else {
-    // 侵入者（拒否）
     screen.className = "full-screen denied";
     statusDiv.innerText = "🚨【ACCESS DENIED】\n警告: 未登録の鍵です";
-    playAlarm();
+    playAlarm(); // 爆音ブザー
   }
 
-  // 4秒後に自動で元の「🟢 監視中」画面に戻す
   resetTimer = setTimeout(() => {
     screen.className = "full-screen";
     statusDiv.innerText = "🟢 監視中...\nカードをかざしてください";
@@ -147,7 +151,35 @@ function handleCardScan(serialNumber) {
   }, 4000);
 }
 
-// スリープ防止（画面を消さない）
+// 通過音
+function playTone(freq, duration) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sine";
+  osc.frequency.value = freq;
+  gain.gain.value = 0.3; // 音量
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+// 警告音
+function playAlarm() {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.value = 140;
+  gain.gain.value = 0.5; // 音量
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.6);
+}
+
+// スリープ防止
 async function requestWakeLock() {
   try {
     if ('wakeLock' in navigator) {
@@ -157,13 +189,6 @@ async function requestWakeLock() {
     console.log("WakeLock Error: " + err);
   }
 }
-
-// 画面切り替え時にスリープ防止を再保持
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === 'visible') {
-    requestWakeLock();
-  }
-});
 </script>
 
 </body>
