@@ -41,7 +41,7 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    /* カメラ映像・解析用の非表示要素 */
+    /* 非表示の監視用要素 */
     video, canvas { display: none; }
 
     /* 侵入者警告時の画面 */
@@ -56,22 +56,22 @@
 
 <div class="box" id="gateBox">
   <h1>BEDROOM GATE</h1>
-  <p style="color:#888; font-size:12px;">NFC & CAMERA SHIELD</p>
+  <p style="color:#888; font-size:12px;">NFC ABSOLUTE PRIORITY</p>
   
   <button id="startBtn" onclick="initSystem()">システムを起動する</button>
   
   <div id="status">ボタンを押して起動してください</div>
 </div>
 
-<!-- 裏で動くカメラ監視用 -->
+<!-- 极小サイズ（64x48）にしてCPU負荷をほぼゼロに -->
 <video id="video" autoplay playsinline></video>
-<canvas id="canvas" width="160" height="120"></canvas>
+<canvas id="canvas" width="64" height="48"></canvas>
 
 <script>
 const CEO_CARD_ID = "04:aa:65:a6:72:26:81";
 
 let audioCtx = null;
-let isAuthorized = false; // 通過許可フラグ
+let isAuthorized = false;
 let authTimer = null;
 let resetTimer = null;
 let lastFrameData = null;
@@ -86,7 +86,7 @@ async function initSystem() {
   const statusEl = document.getElementById('status');
   const btn = document.getElementById('startBtn');
 
-  // 1. NFCの起動（最優先）
+  // 1. 【最優先】NFCの起動
   if (!('NDEFReader' in window)) {
     statusEl.innerText = "エラー: Web NFC非対応ブラウザです";
     return;
@@ -99,7 +99,7 @@ async function initSystem() {
     btn.style.display = 'none';
     statusEl.innerText = "🟢 監視中...\nカードをかざしてください";
 
-    // NFC読み取りイベント
+    // NFC読取は即座に反応するように直結
     ndef.onreading = (event) => {
       unlockAudio();
       handleCard(event.serialNumber);
@@ -114,45 +114,43 @@ async function initSystem() {
     return;
   }
 
-  // 2. カメラの起動（NFCの邪魔をしないよう非同期で静かに動かす）
+  // 2. 【おまけ】カメラ監視（NFCを絶対に邪魔しないよう超低負荷に間引き）
   try {
     const video = document.getElementById('video');
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
     video.srcObject = stream;
     
-    // 0.3秒ごとに動きをチェック
-    setInterval(detectMotion, 300);
+    // チェック頻度を「1秒に1回」に大幅ダウン
+    setInterval(detectMotion, 1000);
   } catch (err) {
-    console.log("カメラ使用不可（NFCのみで動作します）");
+    console.log("カメラなしモードで稼働します");
   }
 }
 
-// 【カード認証の処理】
+// 【カード認証（最優先処理）】
 function handleCard(serialNumber) {
   clearTimeout(authTimer);
   clearTimeout(resetTimer);
 
   if (serialNumber === CEO_CARD_ID) {
-    // 正しいCEOカード
-    isAuthorized = true; // 10秒間、カメラの無断通過検知を「無効（セーフ）」にする
+    isAuthorized = true; // 10秒間、カメラの警報をブロック
     document.body.className = "";
     document.getElementById('status').innerText = `【ACCESS GRANTED】\nようこそ、CEO\n(10秒間通過可能)`;
-    playTone(880, 0.3); // 成功音
+    playTone(880, 0.3);
 
-    // 10秒経ったら自動でロック状態に戻る
     authTimer = setTimeout(() => {
       isAuthorized = false;
       document.getElementById('status').innerText = "🟢 監視中...\nカードをかざしてください";
     }, 10000);
 
   } else {
-    // 別の関係ないカードがタッチされた場合
     triggerAlarm(`🚨【ACCESS DENIED】\n未登録のカードです\n(ID: ${serialNumber})`);
   }
 }
 
-// 【動体検知（無断通過チェック）】
+// 【超軽量動体検知（CPUに負担をかけない）】
 function detectMotion() {
+  if (!navigator.mediaDevices) return;
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
@@ -164,14 +162,14 @@ function detectMotion() {
 
   if (lastFrameData) {
     let diff = 0;
-    for (let i = 0; i < currentFrame.data.length; i += 4) {
+    // 処理を軽くするため「4ピクセルおき（16バイト単位）」に間引いて計算
+    for (let i = 0; i < currentFrame.data.length; i += 16) {
       diff += Math.abs(currentFrame.data[i] - lastFrameData.data[i]);
     }
 
-    // 画面の前を人が横切った（大きなピクセル変化を検知）
-    if (diff > 500000) { 
+    // 無断通過の閾値
+    if (diff > 80000) { 
       if (!isAuthorized) {
-        // 【認証なしで通り過ぎた！】 ➔ 警報発動
         triggerAlarm("🚨【UNAUTHORIZED PASS】\n無断通過を検知しました！");
       }
     }
@@ -179,14 +177,13 @@ function detectMotion() {
   lastFrameData = currentFrame;
 }
 
-// 【警報発動処理】
+// 【警告処理】
 function triggerAlarm(msg) {
   clearTimeout(resetTimer);
   document.body.className = "denied";
   document.getElementById('status').innerText = msg;
-  playTone(200, 0.5); // 低い警告音
+  playTone(200, 0.5);
 
-  // 4秒後に監視状態へ復帰
   resetTimer = setTimeout(() => {
     document.body.className = "";
     document.getElementById('status').innerText = "🟢 監視中...\nカードをかざしてください";
