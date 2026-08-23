@@ -3,155 +3,77 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BEDROOM HQ SECURITY GATE</title>
+  <title>NFC GATE STABLE</title>
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
+    body {
       background: #08080c;
       color: #00ff66;
-      font-family: 'Courier New', monospace;
+      font-family: monospace;
       text-align: center;
-      user-select: none;
+      padding: 40px 20px;
+      margin: 0;
     }
-    .full-screen {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      box-sizing: border-box;
-      padding: 20px;
-      transition: background 0.3s;
-    }
-    .gate-box {
+    .box {
       border: 2px solid #00ff66;
       border-radius: 12px;
       padding: 30px;
-      width: 90%;
       max-width: 400px;
-      box-shadow: 0 0 20px rgba(0, 255, 102, 0.2);
+      margin: 0 auto;
       background: rgba(0, 20, 10, 0.6);
+      box-shadow: 0 0 20px rgba(0, 255, 102, 0.2);
     }
-    h1 { font-size: 18px; letter-spacing: 2px; margin: 0 0 5px 0; }
-    .subtitle { color: #888; font-size: 11px; margin-bottom: 25px; }
-    .status-text {
+    h1 { font-size: 18px; margin-bottom: 5px; }
+    #status {
       font-size: 20px;
       font-weight: bold;
-      margin: 20px 0;
+      margin: 30px 0;
       min-height: 80px;
       white-space: pre-wrap;
-      line-height: 1.4;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
-    .hint { font-size: 12px; color: #666; margin-top: 15px; }
-    
-    video, canvas { display: none; } /* 裏で動かすため非表示 */
-
-    /* 拒否・侵入警報時の画面 */
-    .denied { background: #250505 !important; color: #ff4444 !important; }
-    .denied .gate-box { border-color: #ff4444; box-shadow: 0 0 25px rgba(255, 68, 68, 0.5); background: rgba(30, 0, 0, 0.6); }
+    button {
+      background: #00ff66;
+      color: #000;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 14px 28px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .denied {
+      background: #250505 !important;
+      color: #ff4444 !important;
+    }
+    .denied .box { border-color: #ff4444; background: rgba(30, 0, 0, 0.6); }
   </style>
 </head>
-<body onclick="enableGate()">
+<body>
 
-<div id="main-screen" class="full-screen">
-  <div class="gate-box">
-    <h1>BEDROOM HQ SECURITY</h1>
-    <div class="subtitle">--- NFC & CAMERA GATE ---</div>
-    
-    <div id="status" class="status-text">👆 画面を1回タップして<br>システムを起動してください</div>
-    <div id="hint" class="hint">タッチ認証 ＋ 無断通過検知を有効化します</div>
-  </div>
+<div class="box" id="gateBox">
+  <h1>BEDROOM GATE</h1>
+  <p style="color:#888; font-size:12px;">NFC STABLE MODE</p>
+  
+  <button id="startBtn" onclick="initNfc()">システムを起動する</button>
+  
+  <div id="status">ボタンを押して起動してください</div>
 </div>
-
-<!-- カメラ解析用の隠し要素 -->
-<video id="video" autoplay playsinline></video>
-<canvas id="canvas" width="120" height="90"></canvas>
 
 <script>
 const CEO_CARD_ID = "04:aa:65:a6:72:26:81";
-
-let isRunning = false;
 let audioCtx = null;
-let isAuthorized = false; // 通過許可フラグ
-let authTimer = null;
-let resetTimer = null;
-let lastFrameData = null;
 
-function initAudio() {
+function unlockAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-async function enableGate() {
-  initAudio();
-
-  if (!isRunning) {
-    playGentleChime();
-
-    document.getElementById('hint').style.display = 'none';
-    requestWakeLock();
-    isRunning = true;
-    
-    // カメラとNFCを独立して起動
-    startCamera();
-    startNfcLoop();
-  }
-}
-
-// 1. 独立したカメラ動体検知（軽量化のためサイズ縮小＆処理間隔を調整）
-async function startCamera() {
-  try {
-    const video = document.getElementById('video');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-    video.srcObject = stream;
-    
-    // 250msごとに軽量チェック
-    setInterval(detectMotion, 250);
-  } catch (err) {
-    console.log("カメラ初期化スキップまたはエラー: " + err);
-  }
-}
-
-function detectMotion() {
-  if (!isRunning) return;
-
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-
-  if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
-
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  if (lastFrameData) {
-    let diff = 0;
-    for (let i = 0; i < currentFrame.data.length; i += 4) {
-      diff += Math.abs(currentFrame.data[i] - lastFrameData.data[i]);
-    }
-
-    // 動きの閾値（無断通過を検知）
-    if (diff > 450000) { 
-      if (!isAuthorized) {
-        triggerIntruderAlert();
-      }
-    }
-  }
-  lastFrameData = currentFrame;
-}
-
-// 2. NFC常時待機ループ（最優先で維持）
-async function startNfcLoop() {
-  const statusDiv = document.getElementById('status');
+async function initNfc() {
+  unlockAudio();
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('startBtn');
 
   if (!('NDEFReader' in window)) {
-    statusDiv.innerText = "エラー: Web NFC非対応環境です";
+    statusEl.innerText = "エラー: このブラウザはWeb NFCに対応していません";
     return;
   }
 
@@ -159,119 +81,46 @@ async function startNfcLoop() {
     const ndef = new NDEFReader();
     await ndef.scan();
     
-    statusDiv.innerText = "🟢 監視中...\nカードをかざしてください";
-    statusDiv.style.color = "#00ff66";
+    // 起動成功したらボタンを隠して監視中にする
+    btn.style.display = 'none';
+    statusEl.innerText = "🟢 監視中...\nカードをかざしてください";
 
-    ndef.addEventListener("reading", ({ serialNumber }) => {
-      handleCardScan(serialNumber);
-    });
+    ndef.onreading = (event) => {
+      unlockAudio();
+      const serialNumber = event.serialNumber;
+      
+      if (serialNumber === CEO_CARD_ID) {
+        // 許可
+        document.body.className = "";
+        statusEl.innerText = `【ACCESS GRANTED】\nようこそ、CEO\n(ID: ${serialNumber})`;
+        playTone(880, 0.3);
+      } else {
+        // 拒否
+        document.body.className = "denied";
+        statusEl.innerText = `🚨【ACCESS DENIED】\n未登録のカードです\n(ID: ${serialNumber})`;
+        playTone(200, 0.5);
+      }
+    };
+
+    ndef.onreadingerror = () => {
+      statusEl.innerText = "⚠️ 読み取りエラー\nもう一度かざしてください";
+    };
 
   } catch (error) {
-    statusDiv.innerText = "NFC接続エラー: " + error + "\n再試行中...";
-    setTimeout(startNfcLoop, 3000);
+    statusEl.innerText = "NFC起動エラー:\n" + error + "\n\n※ページを再読み込みしてやり直してください";
   }
 }
 
-// 3. カードタッチ判定
-function handleCardScan(serialNumber) {
-  const statusDiv = document.getElementById('status');
-  const screen = document.getElementById('main-screen');
-
-  initAudio();
-  clearTimeout(authTimer);
-  clearTimeout(resetTimer);
-
-  if (serialNumber === CEO_CARD_ID) {
-    // 【認証成功】
-    isAuthorized = true; // 10秒間、カメラの警報をミュート
-    screen.className = "full-screen";
-    statusDiv.innerText = "【ACCESS GRANTED】\nようこそ、CEO\n(10秒間通過可能)";
-    statusDiv.style.color = "#00ff66";
-    playSuccessSound();
-
-    // 10秒後に自動で再びロック状態へ
-    authTimer = setTimeout(() => {
-      isAuthorized = false;
-      statusDiv.innerText = "🟢 監視中...\nカードをかざしてください";
-    }, 10000);
-
-  } else {
-    // 【未登録カード】
-    triggerIntruderAlert("🚨【ACCESS DENIED】\n未登録のカードです");
-  }
-}
-
-// 4. 無断通過・未登録カード共通の警告処理
-function triggerIntruderAlert(msg = "🚨【WARNING】\n無断通過を検知しました！") {
-  const statusDiv = document.getElementById('status');
-  const screen = document.getElementById('main-screen');
-
-  initAudio();
-  clearTimeout(resetTimer);
-
-  screen.className = "full-screen denied";
-  statusDiv.innerText = msg;
-  playErrorSound();
-
-  // 4秒後に監視状態へ復帰
-  resetTimer = setTimeout(() => {
-    screen.className = "full-screen";
-    statusDiv.innerText = "🟢 監視中...\nカードをかざしてください";
-    statusDiv.style.color = "#00ff66";
-  }, 4000);
-}
-
-// 🎵 サウンド群（丸みのある優しいトーン）
-function playGentleChime() {
+function playTone(freq, duration) {
   if (!audioCtx) return;
-  const now = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(523.25, now);
-  osc.frequency.setValueAtTime(659.25, now + 0.1);
-  gain.gain.setValueAtTime(0.2, now);
-  gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+  osc.frequency.value = freq;
+  gain.gain.value = 0.3;
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-  osc.start(now);
-  osc.stop(now + 0.3);
-}
-
-function playSuccessSound() {
-  if (!audioCtx) return;
-  const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(440, now);
-  osc.frequency.setValueAtTime(880, now + 0.12);
-  gain.gain.setValueAtTime(0.25, now);
-  gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start(now);
-  osc.stop(now + 0.35);
-}
-
-function playErrorSound() {
-  if (!audioCtx) return;
-  const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(220, now);
-  osc.frequency.setValueAtTime(165, now + 0.15);
-  gain.gain.setValueAtTime(0.3, now);
-  gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start(now);
-  osc.stop(now + 0.4);
-}
-
-async function requestWakeLock() {
-  try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch (err) {}
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
 }
 </script>
 
