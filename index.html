@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NFC GATE STABLE</title>
+  <title>BEDROOM HQ SECURITY GATE</title>
   <style>
     body {
       background: #08080c;
       color: #00ff66;
       font-family: monospace;
       text-align: center;
-      padding: 40px 20px;
+      padding: 30px 20px;
       margin: 0;
+      transition: background 0.3s;
     }
     .box {
       border: 2px solid #00ff66;
@@ -26,7 +27,7 @@
     #status {
       font-size: 20px;
       font-weight: bold;
-      margin: 30px 0;
+      margin: 25px 0;
       min-height: 80px;
       white-space: pre-wrap;
     }
@@ -40,40 +41,54 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    /* カメラ映像・解析用の非表示要素 */
+    video, canvas { display: none; }
+
+    /* 侵入者警告時の画面 */
     .denied {
       background: #250505 !important;
       color: #ff4444 !important;
     }
-    .denied .box { border-color: #ff4444; background: rgba(30, 0, 0, 0.6); }
+    .denied .box { border-color: #ff4444; background: rgba(30, 0, 0, 0.6); box-shadow: 0 0 25px rgba(255, 68, 68, 0.5); }
   </style>
 </head>
 <body>
 
 <div class="box" id="gateBox">
   <h1>BEDROOM GATE</h1>
-  <p style="color:#888; font-size:12px;">NFC STABLE MODE</p>
+  <p style="color:#888; font-size:12px;">NFC & CAMERA SHIELD</p>
   
-  <button id="startBtn" onclick="initNfc()">システムを起動する</button>
+  <button id="startBtn" onclick="initSystem()">システムを起動する</button>
   
   <div id="status">ボタンを押して起動してください</div>
 </div>
 
+<!-- 裏で動くカメラ監視用 -->
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas" width="160" height="120"></canvas>
+
 <script>
 const CEO_CARD_ID = "04:aa:65:a6:72:26:81";
+
 let audioCtx = null;
+let isAuthorized = false; // 通過許可フラグ
+let authTimer = null;
+let resetTimer = null;
+let lastFrameData = null;
 
 function unlockAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-async function initNfc() {
+async function initSystem() {
   unlockAudio();
   const statusEl = document.getElementById('status');
   const btn = document.getElementById('startBtn');
 
+  // 1. NFCの起動（最優先）
   if (!('NDEFReader' in window)) {
-    statusEl.innerText = "エラー: このブラウザはWeb NFCに対応していません";
+    statusEl.innerText = "エラー: Web NFC非対応ブラウザです";
     return;
   }
 
@@ -81,25 +96,13 @@ async function initNfc() {
     const ndef = new NDEFReader();
     await ndef.scan();
     
-    // 起動成功したらボタンを隠して監視中にする
     btn.style.display = 'none';
     statusEl.innerText = "🟢 監視中...\nカードをかざしてください";
 
+    // NFC読み取りイベント
     ndef.onreading = (event) => {
       unlockAudio();
-      const serialNumber = event.serialNumber;
-      
-      if (serialNumber === CEO_CARD_ID) {
-        // 許可
-        document.body.className = "";
-        statusEl.innerText = `【ACCESS GRANTED】\nようこそ、CEO\n(ID: ${serialNumber})`;
-        playTone(880, 0.3);
-      } else {
-        // 拒否
-        document.body.className = "denied";
-        statusEl.innerText = `🚨【ACCESS DENIED】\n未登録のカードです\n(ID: ${serialNumber})`;
-        playTone(200, 0.5);
-      }
+      handleCard(event.serialNumber);
     };
 
     ndef.onreadingerror = () => {
@@ -107,8 +110,87 @@ async function initNfc() {
     };
 
   } catch (error) {
-    statusEl.innerText = "NFC起動エラー:\n" + error + "\n\n※ページを再読み込みしてやり直してください";
+    statusEl.innerText = "NFC起動エラー:\n" + error;
+    return;
   }
+
+  // 2. カメラの起動（NFCの邪魔をしないよう非同期で静かに動かす）
+  try {
+    const video = document.getElementById('video');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    video.srcObject = stream;
+    
+    // 0.3秒ごとに動きをチェック
+    setInterval(detectMotion, 300);
+  } catch (err) {
+    console.log("カメラ使用不可（NFCのみで動作します）");
+  }
+}
+
+// 【カード認証の処理】
+function handleCard(serialNumber) {
+  clearTimeout(authTimer);
+  clearTimeout(resetTimer);
+
+  if (serialNumber === CEO_CARD_ID) {
+    // 正しいCEOカード
+    isAuthorized = true; // 10秒間、カメラの無断通過検知を「無効（セーフ）」にする
+    document.body.className = "";
+    document.getElementById('status').innerText = `【ACCESS GRANTED】\nようこそ、CEO\n(10秒間通過可能)`;
+    playTone(880, 0.3); // 成功音
+
+    // 10秒経ったら自動でロック状態に戻る
+    authTimer = setTimeout(() => {
+      isAuthorized = false;
+      document.getElementById('status').innerText = "🟢 監視中...\nカードをかざしてください";
+    }, 10000);
+
+  } else {
+    // 別の関係ないカードがタッチされた場合
+    triggerAlarm(`🚨【ACCESS DENIED】\n未登録のカードです\n(ID: ${serialNumber})`);
+  }
+}
+
+// 【動体検知（無断通過チェック）】
+function detectMotion() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (lastFrameData) {
+    let diff = 0;
+    for (let i = 0; i < currentFrame.data.length; i += 4) {
+      diff += Math.abs(currentFrame.data[i] - lastFrameData.data[i]);
+    }
+
+    // 画面の前を人が横切った（大きなピクセル変化を検知）
+    if (diff > 500000) { 
+      if (!isAuthorized) {
+        // 【認証なしで通り過ぎた！】 ➔ 警報発動
+        triggerAlarm("🚨【UNAUTHORIZED PASS】\n無断通過を検知しました！");
+      }
+    }
+  }
+  lastFrameData = currentFrame;
+}
+
+// 【警報発動処理】
+function triggerAlarm(msg) {
+  clearTimeout(resetTimer);
+  document.body.className = "denied";
+  document.getElementById('status').innerText = msg;
+  playTone(200, 0.5); // 低い警告音
+
+  // 4秒後に監視状態へ復帰
+  resetTimer = setTimeout(() => {
+    document.body.className = "";
+    document.getElementById('status').innerText = "🟢 監視中...\nカードをかざしてください";
+  }, 4000);
 }
 
 function playTone(freq, duration) {
