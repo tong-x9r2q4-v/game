@@ -1,206 +1,2532 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BEDROOM HQ SECURITY GATE</title>
-  <style>
-    body {
-      background: #08080c;
-      color: #00ff66;
-      font-family: monospace;
-      text-align: center;
-      padding: 30px 20px;
-      margin: 0;
-      transition: background 0.3s;
-    }
-    .box {
-      border: 2px solid #00ff66;
-      border-radius: 12px;
-      padding: 30px;
-      max-width: 400px;
-      margin: 0 auto;
-      background: rgba(0, 20, 10, 0.6);
-      box-shadow: 0 0 20px rgba(0, 255, 102, 0.2);
-    }
-    h1 { font-size: 18px; margin-bottom: 5px; }
-    #status {
-      font-size: 20px;
-      font-weight: bold;
-      margin: 25px 0;
-      min-height: 80px;
-      white-space: pre-wrap;
-    }
-    button {
-      background: #00ff66;
-      color: #000;
-      font-size: 16px;
-      font-weight: bold;
-      padding: 14px 28px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    /* 非表示の監視用要素 */
-    video, canvas { display: none; }
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    /* 侵入者警告時の画面 */
-    .denied {
-      background: #250505 !important;
-      color: #ff4444 !important;
-    }
-    .denied .box { border-color: #ff4444; background: rgba(30, 0, 0, 0.6); box-shadow: 0 0 25px rgba(255, 68, 68, 0.5); }
-  </style>
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TongPhoneOS">
+
+<title>Try TongPhoneOS</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    background: #050505;
+    color: white;
+    overflow-x: hidden;
+}
+
+button {
+    font: inherit;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* =========================
+   INTRO
+========================= */
+
+#intro {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    background:
+        radial-gradient(circle at 50% 20%, #333 0%, #111 35%, #050505 70%);
+}
+
+.intro-card {
+    width: min(520px, 100%);
+    text-align: center;
+}
+
+.tong-logo {
+    font-size: 82px;
+    font-weight: 800;
+    letter-spacing: -6px;
+    margin-bottom: 10px;
+}
+
+.intro-title {
+    font-size: 42px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.intro-subtitle {
+    color: #aaa;
+    font-size: 18px;
+    margin: 15px 0 35px;
+}
+
+.language-box {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 25px;
+}
+
+.lang-button {
+    border: 1px solid #555;
+    background: rgba(255,255,255,.06);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.lang-button.active {
+    background: white;
+    color: black;
+}
+
+.primary-button {
+    width: 100%;
+    border: none;
+    border-radius: 18px;
+    padding: 17px;
+    background: white;
+    color: black;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.primary-button:active {
+    transform: scale(.98);
+}
+
+/* =========================
+   INSTALL GUIDE
+========================= */
+
+#installGuide {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,.92);
+    backdrop-filter: blur(20px);
+}
+
+.guide-card {
+    width: min(500px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #171717;
+    border: 1px solid #333;
+    border-radius: 28px;
+    padding: 28px;
+}
+
+.guide-icon {
+    font-size: 48px;
+}
+
+.guide-card h2 {
+    margin: 8px 0;
+}
+
+.guide-card p {
+    color: #aaa;
+    line-height: 1.7;
+}
+
+.install-step {
+    background: #222;
+    border-radius: 18px;
+    padding: 16px;
+    margin: 12px 0;
+}
+
+.install-step strong {
+    display: block;
+    margin-bottom: 7px;
+}
+
+.install-step span {
+    color: #bbb;
+    line-height: 1.6;
+}
+
+.install-buttons {
+    margin-top: 20px;
+}
+
+/* =========================
+   PHONE
+========================= */
+
+#experience {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+    background:
+        radial-gradient(circle, #252525 0%, #080808 60%);
+}
+
+.phone {
+    position: relative;
+    width: min(390px, 94vw);
+    height: min(820px, 94vh);
+    min-height: 650px;
+    border: 8px solid #191919;
+    border-radius: 48px;
+    background: black;
+    box-shadow:
+        0 30px 100px rgba(0,0,0,.7),
+        inset 0 0 0 1px #555;
+    overflow: hidden;
+}
+
+.phone-screen {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #111;
+}
+
+/* Dynamic island */
+
+.dynamic-island {
+    position: absolute;
+    z-index: 50;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 34px;
+    border-radius: 20px;
+    background: #000;
+}
+
+/* Status bar */
+
+.status-bar {
+    position: absolute;
+    z-index: 40;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 55px;
+    padding: 15px 20px 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    pointer-events: none;
+}
+
+.status-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* =========================
+   LOCK SCREEN
+========================= */
+
+.lock-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background:
+        linear-gradient(
+            160deg,
+            #152033,
+            #111827 45%,
+            #030303 100%
+        );
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform .5s ease;
+}
+
+.lock-time {
+    font-size: 74px;
+    font-weight: 300;
+    letter-spacing: -4px;
+}
+
+.lock-date {
+    color: #ddd;
+    margin-top: -5px;
+}
+
+.lock-message {
+    position: absolute;
+    bottom: 115px;
+    color: #bbb;
+    font-size: 14px;
+}
+
+.lock-bottom {
+    position: absolute;
+    bottom: 32px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+}
+
+.lock-button {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 1px solid #ffffff33;
+    background: #ffffff1a;
+    color: white;
+    font-size: 22px;
+}
+
+/* =========================
+   HOME
+========================= */
+
+.home-screen {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 30% 20%, #30465f, transparent 30%),
+        radial-gradient(circle at 80% 70%, #342a55, transparent 35%),
+        linear-gradient(160deg, #101820, #070709);
+    padding: 75px 18px 80px;
+    overflow-y: auto;
+}
+
+.widgets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.widget {
+    min-height: 100px;
+    padding: 15px;
+    border-radius: 22px;
+    background: #ffffff16;
+    border: 1px solid #ffffff12;
+    backdrop-filter: blur(18px);
+}
+
+.widget-title {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.widget-value {
+    font-size: 25px;
+    margin-top: 10px;
+}
+
+.app-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px 10px;
+}
+
+.app {
+    text-align: center;
+    cursor: pointer;
+}
+
+.app-icon {
+    width: 58px;
+    height: 58px;
+    margin: auto;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 27px;
+    background: #222;
+    box-shadow: 0 7px 15px #0005;
+}
+
+.app-name {
+    font-size: 11px;
+    margin-top: 6px;
+    color: #eee;
+}
+
+/* =========================
+   DOCK
+========================= */
+
+.dock {
+    position: absolute;
+    z-index: 30;
+    bottom: 12px;
+    left: 15px;
+    right: 15px;
+    height: 72px;
+    border-radius: 25px;
+    background: #ffffff18;
+    border: 1px solid #ffffff15;
+    backdrop-filter: blur(25px);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+
+/* =========================
+   APP WINDOW
+========================= */
+
+.app-window {
+    position: absolute;
+    z-index: 60;
+    inset: 0;
+    background: #101010;
+    transform: translateY(100%);
+    transition: transform .35s ease;
+}
+
+.app-window.open {
+    transform: translateY(0);
+}
+
+.app-header {
+    height: 75px;
+    padding: 18px 18px 10px;
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    border-bottom: 1px solid #ffffff12;
+}
+
+.app-header h2 {
+    margin: 0;
+}
+
+.close-app {
+    background: #ffffff12;
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+}
+
+/* =========================
+   CONTROL CENTER
+========================= */
+
+.control-center {
+    position: absolute;
+    z-index: 80;
+    inset: 0;
+    padding: 75px 15px 20px;
+    background: #111a;
+    backdrop-filter: blur(30px);
+    transform: translateY(-105%);
+    transition: transform .35s ease;
+}
+
+.control-center.open {
+    transform: translateY(0);
+}
+
+.control-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.control-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.control-card {
+    background: #ffffff15;
+    border-radius: 24px;
+    padding: 18px;
+    min-height: 100px;
+}
+
+.control-card button {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    border: none;
+    background: #ffffff22;
+    color: white;
+    font-size: 23px;
+}
+
+.control-card.active button {
+    background: white;
+    color: black;
+}
+
+.control-card p {
+    margin: 10px 0 0;
+    font-size: 13px;
+}
+
+/* =========================
+   CAMERA
+========================= */
+
+.camera-content {
+    height: calc(100% - 75px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #000;
+}
+
+.camera-preview {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(140deg, #27364a, #17202b 45%, #111);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.camera-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.camera-placeholder {
+    text-align: center;
+    color: #aaa;
+}
+
+.camera-bottom {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+}
+
+.capture {
+    width: 75px;
+    height: 75px;
+    border-radius: 50%;
+    border: 5px solid white;
+    background: transparent;
+}
+
+.camera-action {
+    background: #ffffff18;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+}
+
+/* =========================
+   MESSAGE
+========================= */
+
+.messages {
+    padding: 20px;
+}
+
+.message {
+    max-width: 80%;
+    padding: 12px 16px;
+    border-radius: 19px;
+    margin: 12px 0;
+    line-height: 1.5;
+}
+
+.message.received {
+    background: #292929;
+}
+
+.message.sent {
+    background: #fff;
+    color: #000;
+    margin-left: auto;
+}
+
+.message-input {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+}
+
+.message-input input {
+    flex: 1;
+    border: 1px solid #444;
+    border-radius: 20px;
+    background: #222;
+    color: white;
+    padding: 12px;
+}
+
+.message-input button {
+    width: 45px;
+    border: none;
+    border-radius: 50%;
+}
+
+/* =========================
+   TRANSLATION CALL
+========================= */
+
+.call-content {
+    height: calc(100% - 75px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+}
+
+.avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#fff,#777);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-size: 40px;
+    margin-bottom: 20px;
+}
+
+.call-status {
+    color: #aaa;
+    margin-bottom: 30px;
+}
+
+.translation-box {
+    width: 100%;
+    padding: 18px;
+    border-radius: 20px;
+    background: #ffffff12;
+    margin-bottom: 15px;
+}
+
+.translation-label {
+    font-size: 11px;
+    color: #888;
+}
+
+.translation-text {
+    margin-top: 8px;
+    font-size: 17px;
+}
+
+.call-button {
+    border: none;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: #fff;
+    color: #000;
+    font-size: 25px;
+}
+
+/* =========================
+   AI
+========================= */
+
+.ai-content {
+    padding: 20px;
+}
+
+.ai-message {
+    padding: 15px;
+    border-radius: 20px;
+    background: #ffffff12;
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.ai-input {
+    position: absolute;
+    bottom: 20px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+}
+
+.ai-input input {
+    flex: 1;
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+    padding: 13px;
+    border-radius: 20px;
+}
+
+.ai-input button {
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+}
+
+/* =========================
+   TUTORIAL
+========================= */
+
+#tutorial {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+}
+
+.tutorial-card {
+    width: min(440px,100%);
+    background: #171717;
+    border: 1px solid #444;
+    border-radius: 28px;
+    padding: 28px;
+}
+
+.tutorial-number {
+    color: #999;
+    font-size: 13px;
+}
+
+.tutorial-card h2 {
+    margin: 8px 0 12px;
+}
+
+.tutorial-card p {
+    color: #bbb;
+    line-height: 1.7;
+}
+
+.tutorial-button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 17px;
+    background: white;
+    color: black;
+    font-weight: 700;
+}
+
+/* =========================
+   TOAST
+========================= */
+
+.toast {
+    position: absolute;
+    z-index: 300;
+    left: 50%;
+    bottom: 100px;
+    transform: translateX(-50%) translateY(20px);
+    background: #fff;
+    color: #000;
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: .3s;
+    white-space: nowrap;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* =========================
+   PHOTO RESULT
+========================= */
+
+.photo-result {
+    padding: 20px;
+}
+
+.photo-result img {
+    width: 100%;
+    border-radius: 22px;
+    margin-bottom: 15px;
+}
+
+.share-button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 17px;
+    background: white;
+    color: black;
+    font-weight: 700;
+}
+</style>
 </head>
+
 <body>
 
-<div class="box" id="gateBox">
-  <h1>BEDROOM GATE</h1>
-  <p style="color:#888; font-size:12px;">NFC ABSOLUTE PRIORITY</p>
-  
-  <button id="startBtn" onclick="initSystem()">システムを起動する</button>
-  
-  <div id="status">ボタンを押して起動してください</div>
-</div>
+<!-- =========================
+     INTRO
+========================= -->
 
-<!-- 极小サイズ（64x48）にしてCPU負荷をほぼゼロに -->
-<video id="video" autoplay playsinline></video>
-<canvas id="canvas" width="64" height="48"></canvas>
+<section id="intro">
+
+    <div class="intro-card">
+
+        <div class="tong-logo">tong</div>
+
+        <h1 class="intro-title">
+            Try TongPhoneOS
+        </h1>
+
+        <p class="intro-subtitle">
+            TongPhoneOSを、あなたのブラウザで体験。
+        </p>
+
+        <div class="language-box">
+            <button class="lang-button active" data-lang="ja">
+                日本語
+            </button>
+
+            <button class="lang-button" data-lang="en">
+                English
+            </button>
+
+            <button class="lang-button" data-lang="zh">
+                中文
+            </button>
+
+            <button class="lang-button" data-lang="ko">
+                한국어
+            </button>
+        </div>
+
+        <button
+            class="primary-button"
+            id="startButton">
+            今すぐ試す
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     INSTALL GUIDE
+========================= -->
+
+<section id="installGuide" class="hidden">
+
+    <div class="guide-card">
+
+        <div class="guide-icon">📱</div>
+
+        <h2 id="guideTitle">
+            TongPhoneOSを始めよう
+        </h2>
+
+        <p id="guideDescription">
+            より本格的に体験するため、TongPhoneOSをホーム画面に追加できます。
+        </p>
+
+        <div id="androidGuide" class="install-step hidden">
+
+            <strong>Androidの場合</strong>
+
+            <span>
+                ブラウザのメニュー「︙」を開き、
+                「ホーム画面に追加」または
+                「アプリをインストール」を選択してください。
+            </span>
+
+        </div>
+
+        <div id="iphoneGuide" class="install-step hidden">
+
+            <strong>iPhoneの場合</strong>
+
+            <span>
+                Safariの下部にある共有ボタン
+                「□↑」を押して、
+                「ホーム画面に追加」を選択してください。
+            </span>
+
+        </div>
+
+        <div id="desktopGuide" class="install-step hidden">
+
+            <strong>PCの場合</strong>
+
+            <span>
+                そのまま「体験を開始」を押すと、
+                PC上でTongPhoneOSのスマホUIを体験できます。
+            </span>
+
+        </div>
+
+        <div class="install-buttons">
+
+            <button
+                class="primary-button"
+                id="continueButton">
+                体験を開始
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     EXPERIENCE
+========================= -->
+
+<section id="experience" class="hidden">
+
+    <div class="phone">
+
+        <div class="phone-screen">
+
+            <div class="dynamic-island"></div>
+
+            <div class="status-bar">
+                <span id="statusTime">9:41</span>
+
+                <div class="status-right">
+                    <span>▮▮▮</span>
+                    <span>Wi-Fi</span>
+                    <span>●</span>
+                </div>
+            </div>
+
+
+            <!-- LOCK -->
+
+            <div id="lockScreen" class="lock-screen">
+
+                <div class="lock-time" id="lockTime">
+                    9:41
+                </div>
+
+                <div class="lock-date" id="lockDate">
+                    10月4日 日曜日
+                </div>
+
+                <div class="lock-message">
+                    上にスワイプしてTongPhoneOSを開始
+                </div>
+
+                <div class="lock-bottom">
+
+                    <button class="lock-button">
+                        🔦
+                    </button>
+
+                    <button class="lock-button">
+                        📷
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- HOME -->
+
+            <div id="homeScreen" class="home-screen">
+
+                <div class="widgets">
+
+                    <div class="widget">
+                        <div class="widget-title">
+                            天気
+                        </div>
+                        <div class="widget-value">
+                            ☀️ 24°
+                        </div>
+                    </div>
+
+                    <div class="widget">
+                        <div class="widget-title">
+                            TongAI
+                        </div>
+                        <div class="widget-value">
+                            こんにちは
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="app-grid">
+
+                    <div class="app" data-app="camera">
+                        <div class="app-icon">📷</div>
+                        <div class="app-name">カメラ</div>
+                    </div>
+
+                    <div class="app" data-app="messages">
+                        <div class="app-icon">💬</div>
+                        <div class="app-name">メッセージ</div>
+                    </div>
+
+                    <div class="app" data-app="translateCall">
+                        <div class="app-icon">📞</div>
+                        <div class="app-name">通話</div>
+                    </div>
+
+                    <div class="app" data-app="ai">
+                        <div class="app-icon">🤖</div>
+                        <div class="app-name">TongAI</div>
+                    </div>
+
+                    <div class="app" data-app="browser">
+                        <div class="app-icon">🌐</div>
+                        <div class="app-name">Browser</div>
+                    </div>
+
+                    <div class="app" data-app="maps">
+                        <div class="app-icon">🗺️</div>
+                        <div class="app-name">Maps</div>
+                    </div>
+
+                    <div class="app" data-app="notes">
+                        <div class="app-icon">📝</div>
+                        <div class="app-name">Notes</div>
+                    </div>
+
+                    <div class="app" data-app="photos">
+                        <div class="app-icon">🌄</div>
+                        <div class="app-name">写真</div>
+                    </div>
+
+                    <div class="app" data-app="weather">
+                        <div class="app-icon">🌤️</div>
+                        <div class="app-name">天気</div>
+                    </div>
+
+                    <div class="app" data-app="files">
+                        <div class="app-icon">📁</div>
+                        <div class="app-name">ファイル</div>
+                    </div>
+
+                    <div class="app" data-app="settings">
+                        <div class="app-icon">⚙️</div>
+                        <div class="app-name">設定</div>
+                    </div>
+
+                    <div class="app" data-app="store">
+                        <div class="app-icon">🛍️</div>
+                        <div class="app-name">Tong Store</div>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- DOCK -->
+
+            <div class="dock">
+
+                <div class="app" data-app="phone">
+                    <div class="app-icon">📞</div>
+                </div>
+
+                <div class="app" data-app="messages">
+                    <div class="app-icon">💬</div>
+                </div>
+
+                <div class="app" data-app="browser">
+                    <div class="app-icon">🌐</div>
+                </div>
+
+                <div class="app" data-app="camera">
+                    <div class="app-icon">📷</div>
+                </div>
+
+            </div>
+
+
+            <!-- CONTROL CENTER -->
+
+            <div id="controlCenter" class="control-center">
+
+                <div class="control-title">
+                    コントロールセンター
+                </div>
+
+                <div class="control-grid">
+
+                    <div class="control-card active">
+                        <button onclick="toggleControl(this)">
+                            📡
+                        </button>
+                        <p>通信</p>
+                    </div>
+
+                    <div class="control-card active">
+                        <button onclick="toggleControl(this)">
+                            📶
+                        </button>
+                        <p>Wi-Fi</p>
+                    </div>
+
+                    <div class="control-card">
+                        <button onclick="toggleControl(this)">
+                            🔵
+                        </button>
+                        <p>Bluetooth</p>
+                    </div>
+
+                    <div class="control-card">
+                        <button onclick="toggleControl(this)">
+                            🌙
+                        </button>
+                        <p>集中モード</p>
+                    </div>
+
+                    <div class="control-card">
+                        <button onclick="toggleControl(this)">
+                            🔆
+                        </button>
+                        <p>明るさ</p>
+                    </div>
+
+                    <div class="control-card">
+                        <button onclick="toggleControl(this)">
+                            🔊
+                        </button>
+                        <p>音量</p>
+                    </div>
+
+                </div>
+
+                <button
+                    class="primary-button"
+                    style="margin-top:20px;"
+                    onclick="closeControlCenter()">
+                    閉じる
+                </button>
+
+            </div>
+
+
+            <!-- APP WINDOW -->
+
+            <div id="appWindow" class="app-window">
+
+                <div class="app-header">
+
+                    <h2 id="appTitle">
+                        アプリ
+                    </h2>
+
+                    <button
+                        class="close-app"
+                        onclick="closeApp()">
+                        ×
+                    </button>
+
+                </div>
+
+
+                <!-- CAMERA -->
+
+                <div id="cameraApp" class="app-content hidden">
+
+                    <div class="camera-content">
+
+                        <div class="camera-preview">
+
+                            <video
+                                id="cameraVideo"
+                                autoplay
+                                playsinline>
+                            </video>
+
+                            <div
+                                id="cameraPlaceholder"
+                                class="camera-placeholder">
+
+                                <div style="font-size:50px;">
+                                    📷
+                                </div>
+
+                                <div>
+                                    カメラを体験
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="camera-bottom">
+
+                            <button
+                                class="camera-action"
+                                onclick="startCamera()">
+                                🎥
+                            </button>
+
+                            <button
+                                class="capture"
+                                onclick="takePhoto()">
+                            </button>
+
+                            <button
+                                class="camera-action"
+                                onclick="showToast('写真アプリを開きました')">
+                                🌄
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PHOTO -->
+
+                <div id="photoApp" class="app-content hidden">
+
+                    <div class="photo-result">
+
+                        <h3>
+                            撮影した写真
+                        </h3>
+
+                        <canvas
+                            id="photoCanvas"
+                            style="width:100%;border-radius:22px;background:#222;">
+                        </canvas>
+
+                        <button
+                            class="share-button"
+                            onclick="sharePhoto()">
+                            ↗ 写真を共有
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- MESSAGES -->
+
+                <div id="messagesApp" class="app-content hidden">
+
+                    <div class="messages">
+
+                        <div class="message received">
+                            こんにちは！TongPhoneOSを試しています。
+                        </div>
+
+                        <div class="message sent">
+                            すごい！これブラウザなの？
+                        </div>
+
+                        <div class="message received">
+                            そうです。これはTongPhoneOSの体験版です。
+                        </div>
+
+                        <div class="message sent">
+                            翻訳通話も試してみたい！
+                        </div>
+
+                    </div>
+
+                    <div class="message-input">
+
+                        <input
+                            id="messageInput"
+                            placeholder="メッセージ">
+
+                        <button
+                            onclick="sendMessage()">
+                            ↑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- TRANSLATION CALL -->
+
+                <div id="translateCallApp" class="app-content hidden">
+
+                    <div class="call-content">
+
+                        <div class="avatar">
+                            A
+                        </div>
+
+                        <h2>
+                            TongAI Call
+                        </h2>
+
+                        <div class="call-status">
+                            AI翻訳通話デモ
+                        </div>
+
+                        <div class="translation-box">
+
+                            <div class="translation-label">
+                                相手の言葉
+                            </div>
+
+                            <div class="translation-text">
+                                Hello! How are you?
+                            </div>
+
+                        </div>
+
+                        <div class="translation-box">
+
+                            <div class="translation-label">
+                                TongAIによる翻訳
+                            </div>
+
+                            <div class="translation-text">
+                                こんにちは！元気ですか？
+                            </div>
+
+                        </div>
+
+                        <button
+                            class="call-button"
+                            onclick="showToast('AI翻訳通話を開始しました')">
+                            📞
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- AI -->
+
+                <div id="aiApp" class="app-content hidden">
+
+                    <div class="ai-content">
+
+                        <div class="ai-message">
+                            <strong>TongAI</strong>
+                            <br><br>
+                            こんにちは。TongPhoneOSのAIアシスタントです。
+                            翻訳、検索、文章作成などをサポートします。
+                        </div>
+
+                        <div
+                            id="aiResponse"
+                            class="ai-message hidden">
+                        </div>
+
+                    </div>
+
+                    <div class="ai-input">
+
+                        <input
+                            id="aiInput"
+                            placeholder="TongAIに質問">
+
+                        <button
+                            onclick="askAI()">
+                            ↑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- GENERIC APPS -->
+
+                <div id="genericApp" class="app-content hidden">
+
+                    <div style="padding:25px;">
+
+                        <div
+                            style="
+                            font-size:60px;
+                            margin-bottom:20px;"
+                            id="genericIcon">
+                            📱
+                        </div>
+
+                        <h2 id="genericTitle">
+                            Tong
+                        </h2>
+
+                        <p
+                            id="genericText"
+                            style="
+                            color:#aaa;
+                            line-height:1.8;">
+                            TongPhoneOSのアプリです。
+                        </p>
+
+                        <button
+                            class="primary-button"
+                            onclick="showToast('TongPhoneOSの機能を体験しました')">
+                            体験する
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div id="toast" class="toast">
+                完了
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     TUTORIAL
+========================= -->
+
+<section id="tutorial" class="hidden">
+
+    <div class="tutorial-card">
+
+        <div
+            class="tutorial-number"
+            id="tutorialNumber">
+            1 / 5
+        </div>
+
+        <h2 id="tutorialTitle">
+            TongPhoneOSへようこそ
+        </h2>
+
+        <p id="tutorialText">
+            まずは基本操作を体験しましょう。
+        </p>
+
+        <button
+            class="tutorial-button"
+            id="tutorialNext">
+            次へ
+        </button>
+
+    </div>
+
+</section>
+
 
 <script>
-const CEO_CARD_ID = "04:aa:65:a6:72:26:81";
 
-let audioCtx = null;
-let isAuthorized = false;
-let authTimer = null;
-let resetTimer = null;
-let lastFrameData = null;
+/* =========================
+   STATE
+========================= */
 
-function unlockAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-}
+let selectedLanguage = "ja";
+let tutorialStep = 0;
+let cameraStream = null;
 
-async function initSystem() {
-  unlockAudio();
-  const statusEl = document.getElementById('status');
-  const btn = document.getElementById('startBtn');
 
-  // 1. 【最優先】NFCの起動
-  if (!('NDEFReader' in window)) {
-    statusEl.innerText = "エラー: Web NFC非対応ブラウザです";
-    return;
-  }
+/* =========================
+   DEVICE DETECTION
+========================= */
 
-  try {
-    const ndef = new NDEFReader();
-    await ndef.scan();
-    
-    btn.style.display = 'none';
-    statusEl.innerText = "🟢 監視中...\nカードをかざしてください";
+function getDevice() {
 
-    // NFC読取は即座に反応するように直結
-    ndef.onreading = (event) => {
-      unlockAudio();
-      handleCard(event.serialNumber);
-    };
+    const ua = navigator.userAgent.toLowerCase();
 
-    ndef.onreadingerror = () => {
-      statusEl.innerText = "⚠️ 読み取りエラー\nもう一度かざしてください";
-    };
-
-  } catch (error) {
-    statusEl.innerText = "NFC起動エラー:\n" + error;
-    return;
-  }
-
-  // 2. 【おまけ】カメラ監視（NFCを絶対に邪魔しないよう超低負荷に間引き）
-  try {
-    const video = document.getElementById('video');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-    video.srcObject = stream;
-    
-    // チェック頻度を「1秒に1回」に大幅ダウン
-    setInterval(detectMotion, 1000);
-  } catch (err) {
-    console.log("カメラなしモードで稼働します");
-  }
-}
-
-// 【カード認証（最優先処理）】
-function handleCard(serialNumber) {
-  clearTimeout(authTimer);
-  clearTimeout(resetTimer);
-
-  if (serialNumber === CEO_CARD_ID) {
-    isAuthorized = true; // 10秒間、カメラの警報をブロック
-    document.body.className = "";
-    document.getElementById('status').innerText = `【ACCESS GRANTED】\nようこそ、CEO\n(10秒間通過可能)`;
-    playTone(880, 0.3);
-
-    authTimer = setTimeout(() => {
-      isAuthorized = false;
-      document.getElementById('status').innerText = "🟢 監視中...\nカードをかざしてください";
-    }, 10000);
-
-  } else {
-    triggerAlarm(`🚨【ACCESS DENIED】\n未登録のカードです\n(ID: ${serialNumber})`);
-  }
-}
-
-// 【超軽量動体検知（CPUに負担をかけない）】
-function detectMotion() {
-  if (!navigator.mediaDevices) return;
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-
-  if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
-
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  if (lastFrameData) {
-    let diff = 0;
-    // 処理を軽くするため「4ピクセルおき（16バイト単位）」に間引いて計算
-    for (let i = 0; i < currentFrame.data.length; i += 16) {
-      diff += Math.abs(currentFrame.data[i] - lastFrameData.data[i]);
+    if (/android/.test(ua)) {
+        return "android";
     }
 
-    // 無断通過の閾値
-    if (diff > 80000) { 
-      if (!isAuthorized) {
-        triggerAlarm("🚨【UNAUTHORIZED PASS】\n無断通過を検知しました！");
-      }
+    if (/iphone|ipad|ipod/.test(ua)) {
+        return "iphone";
     }
-  }
-  lastFrameData = currentFrame;
+
+    return "desktop";
 }
 
-// 【警告処理】
-function triggerAlarm(msg) {
-  clearTimeout(resetTimer);
-  document.body.className = "denied";
-  document.getElementById('status').innerText = msg;
-  playTone(200, 0.5);
 
-  resetTimer = setTimeout(() => {
-    document.body.className = "";
-    document.getElementById('status').innerText = "🟢 監視中...\nカードをかざしてください";
-  }, 4000);
+function isStandalone() {
+
+    return (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true ||
+        window.matchMedia("(display-mode: fullscreen)").matches
+    );
 }
 
-function playTone(freq, duration) {
-  if (!audioCtx) return;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.frequency.value = freq;
-  gain.gain.value = 0.3;
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + duration);
+
+/* =========================
+   LANGUAGE
+========================= */
+
+document.querySelectorAll(".lang-button").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        document.querySelectorAll(".lang-button")
+            .forEach(b => b.classList.remove("active"));
+
+        button.classList.add("active");
+
+        selectedLanguage =
+            button.dataset.lang;
+
+        updateLanguage();
+
+    });
+
+});
+
+
+function updateLanguage() {
+
+    const title =
+        document.querySelector(".intro-title");
+
+    const subtitle =
+        document.querySelector(".intro-subtitle");
+
+    const start =
+        document.getElementById("startButton");
+
+    if (selectedLanguage === "en") {
+
+        title.textContent =
+            "Try TongPhoneOS";
+
+        subtitle.textContent =
+            "Experience TongPhoneOS in your browser.";
+
+        start.textContent =
+            "Try now";
+
+    }
+
+    else if (selectedLanguage === "zh") {
+
+        title.textContent =
+            "体验 TongPhoneOS";
+
+        subtitle.textContent =
+            "直接在浏览器中体验 TongPhoneOS。";
+
+        start.textContent =
+            "立即体验";
+
+    }
+
+    else if (selectedLanguage === "ko") {
+
+        title.textContent =
+            "Try TongPhoneOS";
+
+        subtitle.textContent =
+            "브라우저에서 TongPhoneOS를 체험하세요.";
+
+        start.textContent =
+            "지금 체험";
+
+    }
+
+    else {
+
+        title.textContent =
+            "Try TongPhoneOS";
+
+        subtitle.textContent =
+            "TongPhoneOSを、あなたのブラウザで体験。";
+
+        start.textContent =
+            "今すぐ試す";
+
+    }
+
 }
+
+
+/* =========================
+   START
+========================= */
+
+document
+.getElementById("startButton")
+.addEventListener("click", () => {
+
+    const device = getDevice();
+
+    document
+        .getElementById("intro")
+        .classList.add("hidden");
+
+    const guide =
+        document.getElementById("installGuide");
+
+    guide.classList.remove("hidden");
+
+    document
+        .getElementById("androidGuide")
+        .classList.add("hidden");
+
+    document
+        .getElementById("iphoneGuide")
+        .classList.add("hidden");
+
+    document
+        .getElementById("desktopGuide")
+        .classList.add("hidden");
+
+
+    if (device === "android") {
+
+        document
+            .getElementById("androidGuide")
+            .classList.remove("hidden");
+
+    }
+
+    else if (device === "iphone") {
+
+        document
+            .getElementById("iphoneGuide")
+            .classList.remove("hidden");
+
+    }
+
+    else {
+
+        document
+            .getElementById("desktopGuide")
+            .classList.remove("hidden");
+
+    }
+
+});
+
+
+/* =========================
+   CONTINUE
+========================= */
+
+document
+.getElementById("continueButton")
+.addEventListener("click", () => {
+
+    document
+        .getElementById("installGuide")
+        .classList.add("hidden");
+
+    document
+        .getElementById("experience")
+        .classList.remove("hidden");
+
+    startExperience();
+
+});
+
+
+/* =========================
+   EXPERIENCE START
+========================= */
+
+function startExperience() {
+
+    updateClock();
+
+    setInterval(updateClock, 1000);
+
+    if (isStandalone()) {
+
+        showToast(
+            "ホーム画面から起動しました"
+        );
+
+    }
+
+}
+
+
+/* =========================
+   CLOCK
+========================= */
+
+function updateClock() {
+
+    const now = new Date();
+
+    const hours =
+        String(now.getHours()).padStart(2,"0");
+
+    const minutes =
+        String(now.getMinutes()).padStart(2,"0");
+
+    const time =
+        `${hours}:${minutes}`;
+
+    document.getElementById("lockTime")
+        .textContent = time;
+
+    document.getElementById("statusTime")
+        .textContent = time;
+
+    const month =
+        now.getMonth() + 1;
+
+    const date =
+        now.getDate();
+
+    const weekday =
+        [
+            "日曜日",
+            "月曜日",
+            "火曜日",
+            "水曜日",
+            "木曜日",
+            "金曜日",
+            "土曜日"
+        ][now.getDay()];
+
+    document.getElementById("lockDate")
+        .textContent =
+        `${month}月${date}日 ${weekday}`;
+
+}
+
+
+/* =========================
+   SWIPE / LOCK
+========================= */
+
+let touchStartY = 0;
+
+const lockScreen =
+    document.getElementById("lockScreen");
+
+lockScreen.addEventListener(
+    "touchstart",
+    e => {
+
+        touchStartY =
+            e.touches[0].clientY;
+
+    }
+);
+
+lockScreen.addEventListener(
+    "touchend",
+    e => {
+
+        const endY =
+            e.changedTouches[0].clientY;
+
+        if (touchStartY - endY > 70) {
+
+            unlockPhone();
+
+        }
+
+    }
+);
+
+lockScreen.addEventListener(
+    "click",
+    () => {
+
+        unlockPhone();
+
+    }
+);
+
+
+function unlockPhone() {
+
+    lockScreen.style.transform =
+        "translateY(-100%)";
+
+    if (tutorialStep === 0) {
+
+        setTimeout(() => {
+
+            document
+                .getElementById("tutorial")
+                .classList.remove("hidden");
+
+            updateTutorial();
+
+        }, 400);
+
+    }
+
+}
+
+
+/* =========================
+   TUTORIAL
+========================= */
+
+const tutorialData = [
+
+    {
+        title: "TongPhoneOSへようこそ",
+        text:
+            "これはTongPhoneOSをブラウザ上で体験できるデモです。実際のスマートフォンのように操作できます。"
+    },
+
+    {
+        title: "コントロールセンター",
+        text:
+            "画面上部から下へスワイプすると、コントロールセンターを開けます。通信、Wi-Fi、Bluetooth、明るさなどを操作できます。"
+    },
+
+    {
+        title: "カメラ",
+        text:
+            "ホーム画面のカメラを開いてください。カメラへのアクセスを許可すると、実際のカメラ映像を使った体験ができます。"
+    },
+
+    {
+        title: "写真を共有",
+        text:
+            "写真を撮影すると、その写真をすぐに共有できます。対応ブラウザでは端末の共有メニューを呼び出します。"
+    },
+
+    {
+        title: "TongAI翻訳通話",
+        text:
+            "通話アプリでは、TongAIによるリアルタイム翻訳通話のコンセプトを体験できます。"
+    }
+
+];
+
+
+function updateTutorial() {
+
+    const data =
+        tutorialData[tutorialStep];
+
+    document.getElementById("tutorialNumber")
+        .textContent =
+        `${tutorialStep + 1} / ${tutorialData.length}`;
+
+    document.getElementById("tutorialTitle")
+        .textContent =
+        data.title;
+
+    document.getElementById("tutorialText")
+        .textContent =
+        data.text;
+
+    document.getElementById("tutorialNext")
+        .textContent =
+        tutorialStep === tutorialData.length - 1
+            ? "TongPhoneOSを開始"
+            : "次へ";
+
+}
+
+
+document
+.getElementById("tutorialNext")
+.addEventListener("click", () => {
+
+    if (
+        tutorialStep <
+        tutorialData.length - 1
+    ) {
+
+        tutorialStep++;
+
+        updateTutorial();
+
+    }
+
+    else {
+
+        document
+            .getElementById("tutorial")
+            .classList.add("hidden");
+
+        showToast(
+            "TongPhoneOSへようこそ"
+        );
+
+    }
+
+});
+
+
+/* =========================
+   APP OPEN
+========================= */
+
+document
+.querySelectorAll(".app")
+.forEach(app => {
+
+    app.addEventListener("click", () => {
+
+        const name =
+            app.dataset.app;
+
+        openApp(name);
+
+    });
+
+});
+
+
+function openApp(name) {
+
+    const windowEl =
+        document.getElementById("appWindow");
+
+    const title =
+        document.getElementById("appTitle");
+
+    document
+        .querySelectorAll(".app-content")
+        .forEach(el =>
+            el.classList.add("hidden")
+        );
+
+    const appMap = {
+
+        camera: [
+            "カメラ",
+            "cameraApp"
+        ],
+
+        messages: [
+            "メッセージ",
+            "messagesApp"
+        ],
+
+        translateCall: [
+            "AI翻訳通話",
+            "translateCallApp"
+        ],
+
+        ai: [
+            "TongAI",
+            "aiApp"
+        ],
+
+        browser: [
+            "Tong Browser",
+            "genericApp"
+        ],
+
+        maps: [
+            "Tong Maps",
+            "genericApp"
+        ],
+
+        notes: [
+            "TongNotes",
+            "genericApp"
+        ],
+
+        photos: [
+            "写真",
+            "photoApp"
+        ],
+
+        weather: [
+            "天気",
+            "genericApp"
+        ],
+
+        files: [
+            "ファイル",
+            "genericApp"
+        ],
+
+        settings: [
+            "設定",
+            "genericApp"
+        ],
+
+        store: [
+            "Tong Store",
+            "genericApp"
+        ],
+
+        phone: [
+            "電話",
+            "translateCallApp"
+        ]
+
+    };
+
+    const data =
+        appMap[name] ||
+        ["Tong", "genericApp"];
+
+    title.textContent =
+        data[0];
+
+    document
+        .getElementById(data[1])
+        .classList.remove("hidden");
+
+    if (data[1] === "genericApp") {
+
+        document
+            .getElementById("genericTitle")
+            .textContent =
+            data[0];
+
+        document
+            .getElementById("genericText")
+            .textContent =
+            `${data[0]}のTongPhoneOS体験版です。`;
+
+    }
+
+    windowEl.classList.add("open");
+
+}
+
+
+/* =========================
+   CLOSE APP
+========================= */
+
+function closeApp() {
+
+    const windowEl =
+        document.getElementById("appWindow");
+
+    windowEl.classList.remove("open");
+
+    if (cameraStream) {
+
+        cameraStream.getTracks()
+            .forEach(track => track.stop());
+
+        cameraStream = null;
+
+    }
+
+}
+
+
+/* =========================
+   CONTROL CENTER
+========================= */
+
+function openControlCenter() {
+
+    document
+        .getElementById("controlCenter")
+        .classList.add("open");
+
+}
+
+
+function closeControlCenter() {
+
+    document
+        .getElementById("controlCenter")
+        .classList.remove("open");
+
+}
+
+
+function toggleControl(button) {
+
+    const card =
+        button.parentElement;
+
+    card.classList.toggle("active");
+
+    showToast(
+        card.classList.contains("active")
+            ? "オン"
+            : "オフ"
+    );
+
+}
+
+
+/* =========================
+   TOP SWIPE
+========================= */
+
+let screenTouchStartY = 0;
+
+document
+.querySelector(".phone-screen")
+.addEventListener(
+    "touchstart",
+    e => {
+
+        screenTouchStartY =
+            e.touches[0].clientY;
+
+    }
+);
+
+document
+.querySelector(".phone-screen")
+.addEventListener(
+    "touchend",
+    e => {
+
+        const endY =
+            e.changedTouches[0].clientY;
+
+        const diff =
+            screenTouchStartY - endY;
+
+        if (
+            diff < -80 &&
+            screenTouchStartY < 120
+        ) {
+
+            openControlCenter();
+
+        }
+
+    }
+);
+
+
+/* =========================
+   CAMERA
+========================= */
+
+async function startCamera() {
+
+    const video =
+        document.getElementById("cameraVideo");
+
+    const placeholder =
+        document.getElementById("cameraPlaceholder");
+
+    try {
+
+        cameraStream =
+            await navigator.mediaDevices
+                .getUserMedia({
+                    video: {
+                        facingMode: "environment"
+                    },
+                    audio: false
+                });
+
+        video.srcObject =
+            cameraStream;
+
+        placeholder.classList.add(
+            "hidden"
+        );
+
+        showToast(
+            "カメラを開始しました"
+        );
+
+    }
+
+    catch (error) {
+
+        showToast(
+            "カメラを使用できませんでした"
+        );
+
+    }
+
+}
+
+
+/* =========================
+   TAKE PHOTO
+========================= */
+
+function takePhoto() {
+
+    const video =
+        document.getElementById("cameraVideo");
+
+    const canvas =
+        document.getElementById("photoCanvas");
+
+    if (
+        !video.srcObject ||
+        video.videoWidth === 0
+    ) {
+
+        showToast(
+            "先にカメラを開始してください"
+        );
+
+        return;
+
+    }
+
+    canvas.width =
+        video.videoWidth;
+
+    canvas.height =
+        video.videoHeight;
+
+    const ctx =
+        canvas.getContext("2d");
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    closeApp();
+
+    setTimeout(() => {
+
+        openApp("photos");
+
+        showToast(
+            "写真を撮影しました"
+        );
+
+    }, 300);
+
+}
+
+
+/* =========================
+   SHARE PHOTO
+========================= */
+
+async function sharePhoto() {
+
+    const canvas =
+        document.getElementById("photoCanvas");
+
+    canvas.toBlob(async blob => {
+
+        if (!blob) {
+
+            showToast(
+                "写真を準備できませんでした"
+            );
+
+            return;
+
+        }
+
+        const file =
+            new File(
+                [blob],
+                "tong-photo.png",
+                {
+                    type: "image/png"
+                }
+            );
+
+        try {
+
+            if (
+                navigator.canShare &&
+                navigator.canShare({
+                    files: [file]
+                })
+            ) {
+
+                await navigator.share({
+                    files: [file],
+                    title: "TongPhoneOS",
+                    text: "TongPhoneOSで撮影した写真"
+                });
+
+            }
+
+            else if (
+                navigator.share
+            ) {
+
+                await navigator.share({
+                    title: "TongPhoneOS",
+                    text: "TongPhoneOSで撮影した写真"
+                });
+
+            }
+
+            else {
+
+                showToast(
+                    "このブラウザでは共有機能を利用できません"
+                );
+
+            }
+
+        }
+
+        catch (error) {
+
+            if (
+                error.name !==
+                "AbortError"
+            ) {
+
+                showToast(
+                    "共有できませんでした"
+                );
+
+            }
+
+        }
+
+    }, "image/png");
+
+}
+
+
+/* =========================
+   MESSAGES
+========================= */
+
+function sendMessage() {
+
+    const input =
+        document.getElementById(
+            "messageInput"
+        );
+
+    const value =
+        input.value.trim();
+
+    if (!value) return;
+
+    const messages =
+        document.querySelector(
+            "#messagesApp .messages"
+        );
+
+    const message =
+        document.createElement("div");
+
+    message.className =
+        "message sent";
+
+    message.textContent =
+        value;
+
+    messages.appendChild(message);
+
+    input.value = "";
+
+    setTimeout(() => {
+
+        const reply =
+            document.createElement("div");
+
+        reply.className =
+            "message received";
+
+        reply.textContent =
+            "TongPhoneOSのデモメッセージです。";
+
+        messages.appendChild(reply);
+
+        messages.scrollTop =
+            messages.scrollHeight;
+
+    }, 700);
+
+}
+
+
+/* =========================
+   AI
+========================= */
+
+function askAI() {
+
+    const input =
+        document.getElementById(
+            "aiInput"
+        );
+
+    const response =
+        document.getElementById(
+            "aiResponse"
+        );
+
+    const value =
+        input.value.trim();
+
+    if (!value) return;
+
+    response.classList.remove(
+        "hidden"
+    );
+
+    response.innerHTML =
+        `<strong>TongAI</strong><br><br>
+        「${escapeHTML(value)}」についてですね。<br><br>
+        これはTongPhoneOSのAIデモです。
+        将来的にはTongAIと実際に接続して、
+        より高度な回答・翻訳・検索などを提供できます。`;
+
+    input.value = "";
+
+}
+
+
+/* =========================
+   ESCAPE
+========================= */
+
+function escapeHTML(value) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent =
+        value;
+
+    return div.innerHTML;
+
+}
+
+
+/* =========================
+   TOAST
+========================= */
+
+let toastTimer;
+
+function showToast(message) {
+
+    const toast =
+        document.getElementById("toast");
+
+    toast.textContent =
+        message;
+
+    toast.classList.add("show");
+
+    clearTimeout(toastTimer);
+
+    toastTimer =
+        setTimeout(() => {
+
+            toast.classList.remove(
+                "show"
+            );
+
+        }, 2200);
+
+}
+
+
+/* =========================
+   DESKTOP CONTROL CENTER
+========================= */
+
+document
+.querySelector(".status-bar")
+.addEventListener(
+    "click",
+    () => {
+
+        openControlCenter();
+
+    }
+);
+
+
+/* =========================
+   PWA / STANDALONE DETECTION
+========================= */
+
+window.addEventListener(
+    "load",
+    () => {
+
+        if (isStandalone()) {
+
+            console.log(
+                "TongPhoneOS: standalone mode"
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================
+   BACK BUTTON
+========================= */
+
+window.addEventListener(
+    "popstate",
+    () => {
+
+        closeApp();
+        closeControlCenter();
+
+    }
+);
+
 </script>
 
 </body>
