@@ -3,98 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFC PeerJS 情報表示</title>
+    <title>NFC/PeerJS 連携システム</title>
     <!-- PeerJS ライブラリの読み込み -->
     <script src="https://unpkg.com"></script>
     <style>
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             text-align: center;
-            padding: 40px 20px;
-            background-color: #f5f7fa;
+            padding: 20px;
+            background-color: #f5f5f7;
             color: #333;
         }
         .container {
-            max-width: 500px;
+            max-width: 400px;
             margin: 0 auto;
             background: white;
             padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        h1 { font-size: 24px; margin-bottom: 20px; }
-        .status { font-weight: bold; color: #007bff; margin: 15px 0; }
-        #info-display {
-            font-size: 20px;
+        .mode-selector {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
             font-weight: bold;
-            color: #28a745;
-            padding: 20px;
-            border: 2px dashed #28a745;
+            border: none;
             border-radius: 8px;
-            margin-top: 20px;
-            background-color: #f8fff9;
+            cursor: pointer;
+            margin: 5px;
+            transition: 0.2s;
         }
-        .hidden { display: none; }
+        .btn-inactive { background-color: #e5e5ea; color: #000; }
+        .btn-active { background-color: #0071e3; color: white; }
+        
+        .status-box {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 12px;
+            background: #f2f2f7;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .code-display {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: #1d1d1f;
+            margin: 10px 0;
+        }
+        .success-screen {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #34c759;
+            color: white;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .success-screen h1 { font-size: 48px; margin: 0; }
+        .success-screen p { font-size: 80px; margin: 10px 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>NFC リアルタイム情報共有</h1>
+    <h2>端末連携システム</h2>
     
-    <!-- 受信モード（PCなどで表示する用） -->
-    <div id="receiver-view">
-        <p>あなたの接続用URL（これをNFCに書き込んでください）:</p>
-        <p class="status" id="nfc-url">PeerJSに接続中...</p>
-        
-        <div id="info-display">NFCをかざすとここに情報が表示されます</div>
+    <!-- モード切り替えボタン -->
+    <div class="mode-selector">
+        <button id="btn-touch" class="btn-active" onclick="switchMode('touch')">タッチ版（読む）</button>
+        <button id="btn-show" class="btn-inactive" onclick="switchMode('show')">見せる版（書く）</button>
     </div>
 
-    <!-- 送信モード（スマホでNFCを読み取った時に裏で動く用） -->
-    <div id="sender-view" class="hidden">
-        <p class="status">データを送信しています...</p>
-        <p>送信完了後、この画面は閉じてかまいません。</p>
+    <!-- 状態表示エリア -->
+    <div class="status-box">
+        <div id="mode-instruction">相手のNFCタグを読み取ってください</div>
+        <div id="peer-id-area" style="display:none;">
+            <p>あなたの4桁コード</p>
+            <div id="my-code" class="code-display">----</div>
+        </div>
+        <p id="log-text" style="color: #666; font-size: 14px;">PeerJS 初期化中...</p>
     </div>
 </div>
 
-<script>
-    // URLのパラメータからルームID（相手のPeerID）を取得
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetRoomId = urlParams.get('room');
+<!-- 成功時の一面緑ストップ画面 -->
+<div id="success-screen" class="success-screen">
+    <p>✅</p>
+    <h1>OK</h1>
+    <p style="font-size: 18px;">通信が成立し、処理を停止しました</p>
+</div>
 
-    // PeerJSの初期化（無料のパブリックサーバーを利用）
-    const peer = new Peer();
+<script>
+let currentMode = 'touch'; // 'touch' または 'show'
+let peer = null;
+let conn = null;
+
+// 4桁の数字のIDを生成
+const random4Digit = () => Math.floor(1000 + Math.random() * 9000).toString();
+const myId = random4Digit();
+
+// PeerJSの初期化
+function initPeer() {
+    // 完全に無料かつ公開のシグナリングサーバ（※商用時は独自サーバ推奨）
+    peer = new Peer(myId, {
+        debug: 1
+    });
 
     peer.on('open', (id) => {
-        if (!targetRoomId) {
-            // 【受信側】ルームIDがない場合は、自分のURLを生成して表示
-            const currentUrl = window.location.href.split('?')[0];
-            const nfcUrl = `${currentUrl}?room=${id}`;
-            document.getElementById('nfc-url').innerText = nfcUrl;
-        } else {
-            // 【送信側】ルームIDがある場合は、表示を切り替えて自動送信
-            document.getElementById('receiver-view').classList.add('hidden');
-            document.getElementById('sender-view').classList.remove('hidden');
-            
-            // 受信側に接続
-            const conn = peer.connect(targetRoomId);
-            conn.on('open', () => {
-                // ここで送信したい「情報」を設定（例：スマホの時刻やメッセージなど）
-                const dataToSend = `📱 スマホが接続されました！ (${new Date().toLocaleTimeString()})`;
-                conn.send(dataToSend);
-                
-                // 送信後少し待って通信を終了
-                setTimeout(() => conn.close(), 1000);
-            });
-        }
+        document.getElementById('my-code').innerText = id;
+        log(`あなたのコード: ${id} で接続待機中`);
     });
 
-    // 【受信側】データを受け取ったときの処理
-    peer.on('connection', (conn) => {
-        conn.on('data', (data) => {
-            document.getElementById('info-display').innerText = data;
-        });
+    // 「見せる版」が接続要求を受けたときの処理
+    peer.on('connection', (connection) => {
+        conn = connection;
+        setupConnection();
     });
+
+    peer.on('error', (err) => {
+        log(`エラーが発生しました: ${err.type}`);
+        console.error(err);
+    });
+}
+
+// モードの切り替えボタンが押されたとき
+function switchMode(mode) {
+    currentMode = mode;
+    const btnTouch = document.getElementById('btn-touch');
+    const btnShow = document.getElementById('btn-show');
+    const inst = document.getElementById('mode-instruction');
+    const idArea = document.getElementById('peer-id-area');
+
+    if (mode === 'touch') {
+        btnTouch.className = 'btn-active';
+        btnShow.className = 'btn-inactive';
+        inst.innerText = "相手のNFCタグ、または画面にかざしてください";
+        idArea.style.display = 'none';
+        startNFCReader(); // NFC読み取り開始
+    } else {
+        btnTouch.className = 'btn-inactive';
+        btnShow.className = 'btn-active';
+        inst.innerText = "この画面を相手の端末にかざしてください";
+        idArea.style.display = 'block';
+        startNFCWriter(); // NFC書き込み（またはシミュレート準備）
+    }
+}
+
+// NFC 読み取り（タッチ版）の処理
+async function startNFCReader() {
+    if (!('NDEFReader' in window)) {
+        log("※このブラウザ・端末はNFC(WebNFC)に対応していません。スマートフォンのChrome等で試してください。");
+        return;
+    }
+
+    try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        log("NFCスキャン開始... タグをかざしてください");
+
+        ndef.onreading = (event) => {
+            const decoder = new TextDecoder();
+            for (const record of event.message.records) {
+                if (record.recordType === "text") {
+                    const targetCode = decoder.decode(record.data);
+                    log(`NFCからコードを検出: ${targetCode}`);
+                    
+                    // 読み取った4桁コードの相手にPeerJSで接続
+                    if(targetCode.length === 4 && !isNaN(targetCode)) {
+                        connectToPeer(targetCode);
+                    }
+                }
+            }
+        };
+    } catch (error) {
+        log(`NFC読み取りエラー: ${error}`);
+    }
+}
+
+// NFC 書き込み（見せる版）の処理
+async function startNFCWriter() {
+    if (!('NDEFReader' in window)) {
+        log("※NFC書き込み非対応（手動でコードを伝えるか、対応端末を使用してください）");
+        return;
+    }
+
+    try {
+        const ndef = new NDEFReader();
+        // 自分の4桁のコードを常にNFCタグに書き込める状態にする
+        await ndef.write(myId);
+        log(`NFCにコード [${myId}] を書き込み可能にしました。タッチしてください。`);
+    } catch (error) {
+        log(`NFC書き込み準備エラー: ${error}`);
+    }
+}
+
+// タッチ版から見せる版へPeerJSで発信接続
+function connectToPeer(targetId) {
+    log(`${targetId} に接続を試みています...`);
+    conn = peer.connect(targetId);
+    setupConnection();
+}
+
+// 通信が成立した後の共通イベント処理
+function setupConnection() {
+    conn.on('open', () => {
+        // お互いに繋がったら、シグナルを送る
+        conn.send('STOP_AND_OK');
+        showSuccess();
+    });
+
+    conn.on('data', (data) => {
+        if (data === 'STOP_AND_OK') {
+            showSuccess();
+        }
+    });
+}
+
+// OKとチェックマークを出し、すべての処理を停止
+function showSuccess() {
+    document.getElementById('success-screen').style.display = 'flex';
+    // PeerJSの通信を完全に切断して終了
+    if (peer) {
+        peer.destroy();
+    }
+}
+
+function log(msg) {
+    document.getElementById('log-text').innerText = msg;
+}
+
+// 起動時にPeerJSを初期化して、初期モード(touch)にする
+initPeer();
+switchMode('touch');
 </script>
 </body>
 </html>
