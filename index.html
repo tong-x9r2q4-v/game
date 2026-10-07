@@ -1,831 +1,100 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta name="theme-color" content="#f5f7fb">
-	<title>そうどく聡太は天才紙</title>
-	<style>
-		:root {
-			color-scheme: light;
-			--page: #f5f7fb;
-			--surface: #ffffff;
-			--ink: #20283a;
-			--muted: #788196;
-			--line: #dce2ed;
-			--accent: #5369e8;
-			--accent-soft: #e9edff;
-			--fixed: #29334a;
-			--user: #5269df;
-			--error: #d94d5c;
-			--error-soft: #fff0f1;
-			--highlight: #f0f3ff;
-			--selected: #dfe5ff;
-			--shadow: 0 16px 42px rgba(40, 54, 92, .08);
-		}
-
-		* { box-sizing: border-box; }
-		[hidden] { display: none !important; }
-		.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-		body {
-			margin: 0;
-			min-height: 100vh;
-			padding: 28px 16px 40px;
-			background: var(--page);
-			color: var(--ink);
-			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
-		}
-		button { font: inherit; }
-		.app { width: min(100%, 680px); margin: 0 auto; }
-		header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 4px 2px 22px; }
-		.brand { display: flex; align-items: center; gap: 12px; }
-		.brand-mark {
-			display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px;
-			color: #fff; background: var(--accent); font-weight: 800; font-size: 21px;
-			box-shadow: 0 7px 16px rgba(83, 105, 232, .24);
-		}
-		h1 { margin: 0; font-size: 22px; letter-spacing: .02em; }
-		.subtitle { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
-		.game-card { padding: 22px; background: var(--surface); border: 1px solid #e9edf4; border-radius: 22px; box-shadow: var(--shadow); }
-		.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-		.settings { display: flex; gap: 9px; align-items: center; }
-		.select-wrap { position: relative; }
-		select, .subtle-button {
-			min-height: 40px; border: 1px solid var(--line); border-radius: 11px; background: #fff;
-			color: var(--ink); padding: 0 12px; font-size: 13px;
-		}
-		select { padding-right: 29px; cursor: pointer; }
-		.subtle-button { cursor: pointer; transition: background .15s, border-color .15s; }
-		.subtle-button:hover { background: #f7f8fc; border-color: #c4cce0; }
-		.timer { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 650; white-space: nowrap; }
-		.timer span { color: var(--ink); margin-left: 5px; font-size: 16px; }
-		.board-wrap { max-width: 520px; margin: 0 auto; }
-		.board {
-			display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, minmax(0, 1fr)); aspect-ratio: 1;
-			border: 2px solid #566176; border-radius: 6px; overflow: hidden; background: #fff;
-			touch-action: manipulation;
-		}
-		.cell {
-			position: relative; display: grid; place-items: center; min-width: 0; padding: 0;
-			border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
-			background: #fff; color: var(--user); font-size: clamp(17px, 4.5vw, 25px); font-weight: 600;
-			cursor: pointer; -webkit-tap-highlight-color: transparent;
-		}
-		.cell:nth-child(9n) { border-right: 0; }
-		.cell:nth-child(n+73) { border-bottom: 0; }
-		.cell.block-right { border-right: 2px solid #768095; }
-		.cell.block-bottom { border-bottom: 2px solid #768095; }
-		.cell.fixed { color: var(--fixed); font-weight: 750; }
-		.cell.related { background: var(--highlight); }
-		.cell.same-number { background: #e5eaff; }
-		.cell.selected { z-index: 1; background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
-		.cell.error { color: var(--error); background: var(--error-soft); }
-		.cell.selected.error { box-shadow: inset 0 0 0 2px var(--error); }
-		.cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; z-index: 2; }
-		.notes {
-			position: absolute; inset: 2px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
-			color: #8992a7; font-size: clamp(7px, 1.8vw, 10px); font-weight: 500; line-height: 1;
-		}
-		.notes span { display: grid; place-items: center; }
-		.status { min-height: 22px; margin: 11px 2px 0; color: var(--muted); font-size: 12px; text-align: center; }
-		.status.success { color: #23835c; font-weight: 650; }
-		.status.warning { color: var(--error); }
-		.number-pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; margin: 13px 0 17px; }
-		.number-button {
-			min-height: 48px; border: 1px solid #e1e6f0; border-radius: 12px; background: #fff;
-			color: var(--accent); font-size: 20px; font-weight: 700; cursor: pointer; transition: .15s;
-		}
-		.number-button:hover { background: var(--accent-soft); border-color: #cbd3ff; }
-		.number-button:active, .action-button:active, .subtle-button:active { transform: scale(.97); }
-		.number-button:disabled { color: #b9c0ce; background: #f8f9fc; cursor: default; }
-		.number-button.erase { color: #667085; font-size: 13px; }
-		.actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
-		.action-button {
-			min-height: 46px; border: 1px solid var(--line); border-radius: 12px; background: #fff;
-			color: var(--ink); font-size: 13px; font-weight: 650; cursor: pointer; transition: .15s;
-		}
-		.action-button:hover { background: #f8f9fc; border-color: #c6cede; }
-		.action-button.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
-		.action-button.primary:hover { background: #455bd4; }
-		.action-button.active { color: var(--accent); background: var(--accent-soft); border-color: #cbd3ff; }
-		.help { display: flex; justify-content: space-between; gap: 14px; margin: 16px 3px 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
-		.help strong { color: #5e687d; font-weight: 650; }
-		.peer-card { margin-bottom: 14px; padding: 17px 20px; background: var(--surface); border: 1px solid #e9edf4; border-radius: 18px; box-shadow: var(--shadow); }
-		.peer-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-		.peer-heading h2 { margin: 0; font-size: 16px; }
-		.peer-status { color: var(--muted); font-size: 12px; text-align: right; }
-		.peer-controls { display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: end; gap: 8px; }
-		.peer-controls label { display: block; min-width: 0; color: var(--muted); font-size: 11px; }
-		.peer-controls input { width: 100%; min-width: 0; height: 40px; margin-top: 4px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; font: inherit; }
-		.peer-button { min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font-size: 12px; font-weight: 650; cursor: pointer; white-space: nowrap; }
-		.peer-button.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
-		.peer-button:disabled { opacity: .48; cursor: not-allowed; }
-		.peer-room { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #edf0f5; }
-		.peer-code { color: var(--accent); font-size: 23px; font-weight: 800; letter-spacing: .18em; }
-		.peer-message { flex: 1; color: var(--muted); font-size: 12px; }
-		.peer-room .peer-button { min-height: 36px; }
-		.peer-progress { margin-top: 10px; color: var(--muted); font-size: 12px; }
-		@media (max-width: 520px) {
-			.peer-card { padding: 14px 12px; }
-			.peer-controls { grid-template-columns: 1fr 1fr; }
-			.peer-controls .peer-button { width: 100%; }
-			.peer-heading { align-items: flex-start; }
-		}
-		@media (max-width: 520px) {
-			body { padding: 16px 10px 28px; }
-			header { margin: 2px 3px 15px; }
-			.game-card { padding: 15px 11px 14px; border-radius: 18px; }
-			.toolbar { margin: 0 2px 13px; }
-			.settings { gap: 6px; }
-			select, .subtle-button { min-height: 38px; padding-left: 9px; padding-right: 9px; font-size: 12px; }
-			.number-pad { gap: 5px; margin: 12px 0 13px; }
-			.number-button { min-height: 44px; border-radius: 10px; }
-			.actions { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-			.action-button { min-height: 43px; }
-			.help { display: block; text-align: center; }
-			.help span { display: block; }
-		}
-		@media (max-width: 360px) {
-			.brand-mark { width: 37px; height: 37px; }
-			h1 { font-size: 19px; }
-			.subtitle { font-size: 11px; }
-			.cell { font-size: 16px; }
-		}
-	</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC PeerJS 情報表示</title>
+    <!-- PeerJS ライブラリの読み込み -->
+    <script src="https://unpkg.com"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            text-align: center;
+            padding: 40px 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .status { font-weight: bold; color: #007bff; margin: 15px 0; }
+        #info-display {
+            font-size: 20px;
+            font-weight: bold;
+            color: #28a745;
+            padding: 20px;
+            border: 2px dashed #28a745;
+            border-radius: 8px;
+            margin-top: 20px;
+            background-color: #f8fff9;
+        }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
-	<main class="app">
-		<header>
-			<div class="brand">
-				<div class="brand-mark" aria-hidden="true">9</div>
-				<div><h1>すうどく</h1><p class="subtitle">あせらず、ひとマスずつ。</p></div>
-			</div>
-			<div class="timer" aria-label="経過時間">時間 <span id="timer">00:00</span></div>
-		</header>
 
-		<section class="peer-card" aria-label="オンライン対戦">
-			<div class="peer-heading">
-				<h2>♟ オンライン対戦</h2>
-				<span id="peer-status" class="peer-status" aria-live="polite">オフライン対戦中</span>
-			</div>
-			<div class="peer-controls">
-				<label>プレイヤー名<input id="peer-name" maxlength="18" placeholder="名前" autocomplete="nickname"></label>
-				<button id="host-room" class="peer-button primary" type="button">部屋を作る</button>
-				<label>6桁コード<input id="peer-code-input" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"></label>
-				<button id="join-room" class="peer-button" type="button">参加する</button>
-			</div>
-			<div id="peer-room" class="peer-room" hidden>
-				<div><div id="peer-code" class="peer-code">------</div><small>この6桁コードを対戦相手に共有してください</small></div>
-				<div id="peer-message" class="peer-message">相手の参加を待っています。</div>
-				<button id="start-duel" class="peer-button primary" type="button" disabled>対戦を開始</button>
-				<button id="leave-room" class="peer-button" type="button">退出</button>
-			</div>
-			<div id="peer-progress" class="peer-progress" aria-live="polite" hidden></div>
-		</section>
+<div class="container">
+    <h1>NFC リアルタイム情報共有</h1>
+    
+    <!-- 受信モード（PCなどで表示する用） -->
+    <div id="receiver-view">
+        <p>あなたの接続用URL（これをNFCに書き込んでください）:</p>
+        <p class="status" id="nfc-url">PeerJSに接続中...</p>
+        
+        <div id="info-display">NFCをかざすとここに情報が表示されます</div>
+    </div>
 
-		<section class="game-card" aria-label="数独ゲーム">
-			<div class="toolbar">
-				<div class="settings">
-					<label class="select-wrap"><span class="sr-only">難易度</span>
-						<select id="difficulty" aria-label="難易度">
-							<option value="easy">やさしい</option>
-							<option value="normal" selected>ふつう</option>
-							<option value="hard">むずかしい</option>
-						</select>
-					</label>
-					<button class="subtle-button" id="new-game" type="button">新しい問題</button>
-				</div>
-				<button class="subtle-button" id="reset" type="button" aria-label="問題をリセット">リセット</button>
-			</div>
+    <!-- 送信モード（スマホでNFCを読み取った時に裏で動く用） -->
+    <div id="sender-view" class="hidden">
+        <p class="status">データを送信しています...</p>
+        <p>送信完了後、この画面は閉じてかまいません。</p>
+    </div>
+</div>
 
-			<div class="board-wrap">
-				<div id="board" class="board" role="grid" aria-label="数独 9行9列"></div>
-			</div>
-			<p id="status" class="status" aria-live="polite">マスを選んで、数字を入れてみましょう。</p>
+<script>
+    // URLのパラメータからルームID（相手のPeerID）を取得
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetRoomId = urlParams.get('room');
 
-			<div id="number-pad" class="number-pad" aria-label="数字入力"></div>
-			<div class="actions">
-				<button id="memo" class="action-button" type="button" aria-pressed="false">✎ メモ：オフ</button>
-				<button id="undo" class="action-button" type="button">↶ もどす</button>
-				<button id="check" class="action-button" type="button">✓ 正誤チェック</button>
-				<button id="clear" class="action-button" type="button">⌫ 入力クリア</button>
-			</div>
-			<div class="help"><span><strong>ヒント：</strong>選択マスと同じ数字を色で表示します。</span><span>キーボードの 1〜9・矢印・Delete も使えます。</span></div>
-		</section>
-	</main>
+    // PeerJSの初期化（無料のパブリックサーバーを利用）
+    const peer = new Peer();
 
-	<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-	<script>
-		(() => {
-			'use strict';
+    peer.on('open', (id) => {
+        if (!targetRoomId) {
+            // 【受信側】ルームIDがない場合は、自分のURLを生成して表示
+            const currentUrl = window.location.href.split('?')[0];
+            const nfcUrl = `${currentUrl}?room=${id}`;
+            document.getElementById('nfc-url').innerText = nfcUrl;
+        } else {
+            // 【送信側】ルームIDがある場合は、表示を切り替えて自動送信
+            document.getElementById('receiver-view').classList.add('hidden');
+            document.getElementById('sender-view').classList.remove('hidden');
+            
+            // 受信側に接続
+            const conn = peer.connect(targetRoomId);
+            conn.on('open', () => {
+                // ここで送信したい「情報」を設定（例：スマホの時刻やメッセージなど）
+                const dataToSend = `📱 スマホが接続されました！ (${new Date().toLocaleTimeString()})`;
+                conn.send(dataToSend);
+                
+                // 送信後少し待って通信を終了
+                setTimeout(() => conn.close(), 1000);
+            });
+        }
+    });
 
-			const SIZE = 9;
-			const CELLS = SIZE * SIZE;
-			const REMOVE_COUNTS = { easy: 36, normal: 47, hard: 53 };
-			const boardElement = document.getElementById('board');
-			const numberPad = document.getElementById('number-pad');
-			const statusElement = document.getElementById('status');
-			const timerElement = document.getElementById('timer');
-			const difficultyElement = document.getElementById('difficulty');
-
-			let puzzle = [];
-			let solution = [];
-			let values = [];
-			let notes = Array.from({ length: CELLS }, () => new Set());
-			let selected = -1;
-			let memoMode = false;
-			let history = [];
-			let seconds = 0;
-			let clock = null;
-			let checked = false;
-			let finished = false;
-			let duel = {
-				peer: null,
-				connection: null,
-				role: '',
-				name: '',
-				opponentName: '',
-				active: false,
-				matchId: '',
-				localResult: null,
-				opponentResult: null,
-				startAt: 0
-			};
-
-			const rowOf = (index) => Math.floor(index / SIZE);
-			const colOf = (index) => index % SIZE;
-			const boxStart = (row, col) => [Math.floor(row / 3) * 3, Math.floor(col / 3) * 3];
-			const shuffle = (array) => {
-				for (let i = array.length - 1; i > 0; i--) {
-					const j = Math.floor(Math.random() * (i + 1));
-					[array[i], array[j]] = [array[j], array[i]];
-				}
-				return array;
-			};
-
-			// 現在の数字を元に、合法な候補を返す。
-			function candidates(grid, index) {
-				const row = rowOf(index);
-				const col = colOf(index);
-				const used = new Set();
-				for (let i = 0; i < SIZE; i++) {
-					used.add(grid[row * SIZE + i]);
-					used.add(grid[i * SIZE + col]);
-				}
-				const [startRow, startCol] = boxStart(row, col);
-				for (let r = startRow; r < startRow + 3; r++) {
-					for (let c = startCol; c < startCol + 3; c++) used.add(grid[r * SIZE + c]);
-				}
-				return [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((number) => !used.has(number));
-			}
-
-			// 空きマスのうち候補が最少の場所を選ぶ（MRV）。
-			function findBestEmpty(grid) {
-				let bestIndex = -1;
-				let bestOptions = null;
-				for (let i = 0; i < CELLS; i++) {
-					if (grid[i] !== 0) continue;
-					const options = candidates(grid, i);
-					if (options.length === 0) return { index: i, options };
-					if (bestOptions === null || options.length < bestOptions.length) {
-						bestIndex = i;
-						bestOptions = options;
-						if (options.length === 1) break;
-					}
-				}
-				return bestIndex === -1 ? null : { index: bestIndex, options: bestOptions };
-			}
-
-			// 解数は上限まで数え、唯一解判定にも使う。
-			function countSolutions(grid, limit = 2) {
-				const choice = findBestEmpty(grid);
-				if (choice === null) return 1;
-				if (choice.options.length === 0) return 0;
-				let count = 0;
-				for (const number of choice.options) {
-					grid[choice.index] = number;
-					count += countSolutions(grid, limit - count);
-					grid[choice.index] = 0;
-					if (count >= limit) return count;
-				}
-				return count;
-			}
-
-			function fillSolution(grid) {
-				const choice = findBestEmpty(grid);
-				if (choice === null) return true;
-				if (choice.options.length === 0) return false;
-				for (const number of shuffle(choice.options)) {
-					grid[choice.index] = number;
-					if (fillSolution(grid)) return true;
-					grid[choice.index] = 0;
-				}
-				return false;
-			}
-
-			function makePuzzle(difficulty) {
-				const answer = Array(CELLS).fill(0);
-				fillSolution(answer);
-				const question = answer.slice();
-				let removed = 0;
-				for (const index of shuffle(Array.from({ length: CELLS }, (_, i) => i))) {
-					if (removed >= REMOVE_COUNTS[difficulty]) break;
-					const saved = question[index];
-					question[index] = 0;
-					if (countSolutions(question.slice(), 2) === 1) removed++;
-					else question[index] = saved;
-				}
-				return { question, answer };
-			}
-
-			function renderBoard() {
-				boardElement.replaceChildren();
-				for (let index = 0; index < CELLS; index++) {
-					const row = rowOf(index);
-					const col = colOf(index);
-					const cell = document.createElement('button');
-					cell.type = 'button';
-					cell.className = 'cell';
-					cell.dataset.index = String(index);
-					cell.setAttribute('role', 'gridcell');
-					cell.setAttribute('aria-label', `${row + 1}行${col + 1}列`);
-					if (col === 2 || col === 5) cell.classList.add('block-right');
-					if (row === 2 || row === 5) cell.classList.add('block-bottom');
-					cell.addEventListener('click', () => {
-						selected = index;
-						renderBoard();
-						boardElement.children[index].focus({ preventScroll: true });
-					});
-					boardElement.append(cell);
-				}
-				updateBoard();
-			}
-
-			function updateBoard() {
-				const selectedValue = selected >= 0 ? values[selected] : 0;
-				const selectedRow = selected >= 0 ? rowOf(selected) : -1;
-				const selectedCol = selected >= 0 ? colOf(selected) : -1;
-				const selectedBox = selected >= 0 ? boxStart(selectedRow, selectedCol) : [-1, -1];
-				for (let index = 0; index < CELLS; index++) {
-					const cell = boardElement.children[index];
-					const row = rowOf(index);
-					const col = colOf(index);
-					const fixed = puzzle[index] !== 0;
-					cell.classList.toggle('fixed', fixed);
-					cell.classList.toggle('selected', index === selected);
-					const related = selected >= 0 && (row === selectedRow || col === selectedCol ||
-						(Math.floor(row / 3) * 3 === selectedBox[0] && Math.floor(col / 3) * 3 === selectedBox[1]));
-					cell.classList.toggle('related', related);
-					cell.classList.toggle('same-number', selectedValue !== 0 && values[index] === selectedValue && index !== selected);
-					const conflict = values[index] !== 0 && hasDuplicate(values, index);
-					const wrong = checked && values[index] !== 0 && values[index] !== solution[index];
-					cell.classList.toggle('error', conflict || wrong);
-					cell.replaceChildren();
-					if (values[index] !== 0) {
-						cell.append(document.createTextNode(String(values[index])));
-					} else if (notes[index].size > 0) {
-						const noteGrid = document.createElement('span');
-						noteGrid.className = 'notes';
-						noteGrid.setAttribute('aria-hidden', 'true');
-						for (let n = 1; n <= 9; n++) {
-							const note = document.createElement('span');
-							note.textContent = notes[index].has(n) ? String(n) : '';
-							noteGrid.append(note);
-						}
-						cell.append(noteGrid);
-					}
-					cell.setAttribute('aria-label', `${row + 1}行${col + 1}列、${fixed ? '固定' : '入力可能'}${values[index] ? `、${values[index]}` : ''}${conflict || wrong ? '、間違い' : ''}`);
-					cell.setAttribute('aria-selected', index === selected ? 'true' : 'false');
-				}
-				updateNumberPad();
-			}
-
-			function hasDuplicate(grid, index) {
-				const value = grid[index];
-				if (!value) return false;
-				const row = rowOf(index);
-				const col = colOf(index);
-				for (let i = 0; i < SIZE; i++) {
-					if (i !== col && grid[row * SIZE + i] === value) return true;
-					if (i !== row && grid[i * SIZE + col] === value) return true;
-				}
-				const [startRow, startCol] = boxStart(row, col);
-				for (let r = startRow; r < startRow + 3; r++) {
-					for (let c = startCol; c < startCol + 3; c++) {
-						const other = r * SIZE + c;
-						if (other !== index && grid[other] === value) return true;
-					}
-				}
-				return false;
-			}
-
-			function updateNumberPad() {
-				const inputLocked = finished || (duel.peer !== null && !duel.active);
-				for (const button of numberPad.children) {
-					const number = Number(button.dataset.number);
-					if (number) {
-						const remaining = CELLS - values.filter((value) => value === number).length;
-						button.disabled = remaining === 0 || selected < 0 || puzzle[selected] !== 0 || inputLocked;
-						button.title = `数字${number}を入力（あと${remaining}個）`;
-					} else {
-						button.disabled = selected < 0 || puzzle[selected] !== 0 || inputLocked;
-					}
-				}
-				document.getElementById('undo').disabled = history.length === 0 || finished;
-			}
-
-			function createNumberPad() {
-				for (let number = 1; number <= 9; number++) {
-					const button = document.createElement('button');
-					button.type = 'button';
-					button.className = 'number-button';
-					button.textContent = String(number);
-					button.dataset.number = String(number);
-					button.setAttribute('aria-label', `${number}を入力`);
-					button.addEventListener('click', () => enterNumber(number));
-					numberPad.append(button);
-				}
-				const erase = document.createElement('button');
-				erase.type = 'button';
-				erase.className = 'number-button erase';
-				erase.textContent = '消す';
-				erase.dataset.number = '0';
-				erase.addEventListener('click', () => clearSelected());
-				numberPad.append(erase);
-			}
-
-			function saveHistory() {
-				history.push({ values: values.slice(), notes: notes.map((set) => [...set]) });
-				if (history.length > 100) history.shift();
-			}
-
-			function enterNumber(number) {
-				if (selected < 0 || puzzle[selected] !== 0 || finished || (duel.peer && !duel.active)) return;
-				if (memoMode && values[selected] !== 0) return;
-				saveHistory();
-				if (memoMode) {
-					if (notes[selected].has(number)) notes[selected].delete(number);
-					else notes[selected].add(number);
-				} else {
-					values[selected] = number;
-					notes[selected].clear();
-					checked = false;
-				}
-				updateBoard();
-				sendProgress();
-				if (isComplete()) finishGame();
-				else setStatus('');
-			}
-
-			function clearSelected() {
-				if (selected < 0 || puzzle[selected] !== 0 || finished || (duel.peer && !duel.active)) return;
-				if (values[selected] === 0 && notes[selected].size === 0) return;
-				saveHistory();
-				values[selected] = 0;
-				notes[selected].clear();
-				checked = false;
-				updateBoard();
-				sendProgress();
-				setStatus('入力を消しました。');
-			}
-
-			function undo() {
-				if (!history.length || finished) return;
-				const previous = history.pop();
-				values = previous.values;
-				notes = previous.notes.map((items) => new Set(items));
-				checked = false;
-				updateBoard();
-				setStatus('ひとつ前の入力にもどしました。');
-			}
-
-			function isComplete() {
-				return values.every((value, index) => value === solution[index]);
-			}
-
-			function checkBoard() {
-				if (finished) return;
-				checked = true;
-				updateBoard();
-				const wrong = values.some((value, index) => value !== 0 && value !== solution[index]);
-				const duplicate = values.some((value, index) => value !== 0 && hasDuplicate(values, index));
-				if (wrong || duplicate) setStatus('赤いマスを確認してみましょう。固定数字は変更できません。', 'warning');
-				else if (values.some((value) => value === 0)) setStatus('ここまでの入力は正解です。残りのマスも埋めましょう。', 'success');
-				else finishGame();
-			}
-
-			function setStatus(message, kind = '') {
-				statusElement.textContent = message;
-				statusElement.className = `status${kind ? ` ${kind}` : ''}`;
-			}
-
-			function finishGame() {
-				if (finished) return;
-				finished = true;
-				clearInterval(clock);
-				updateBoard();
-				if (duel.active) {
-					duel.localResult = { solved: true, time: seconds };
-					duel.connection.send({ type: 'finish', matchId: duel.matchId, solved: true, time: seconds });
-					setStatus('クリア！ 相手の結果を待っています…', 'success');
-					updateDuelResult();
-				} else {
-					setStatus(`クリア！ おめでとうございます。タイム：${formatTime(seconds)}`, 'success');
-				}
-			}
-
-			function formatTime(totalSeconds) {
-				const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-				const secs = (totalSeconds % 60).toString().padStart(2, '0');
-				return `${minutes}:${secs}`;
-			}
-
-			function startTimer(startAt = 0) {
-				clearInterval(clock);
-				seconds = 0;
-				timerElement.textContent = formatTime(seconds);
-				clock = setInterval(() => {
-					if (finished) return;
-					if (startAt && Date.now() < startAt) {
-						seconds = 0;
-						setStatus(`対戦開始まで ${Math.ceil((startAt - Date.now()) / 1000)} 秒…`);
-						timerElement.textContent = '00:00';
-						return;
-					}
-					seconds = startAt ? Math.floor((Date.now() - startAt) / 1000) : seconds + 1;
-					timerElement.textContent = formatTime(seconds);
-					if (startAt && statusElement.textContent.startsWith('対戦開始まで')) setStatus('相手より早く解答しましょう！');
-				}, 1000);
-			}
-
-			function randomRoomCode() {
-				return String(Math.floor(100000 + Math.random() * 900000));
-			}
-
-			function setPeerStatus(message) {
-				document.getElementById('peer-status').textContent = message;
-			}
-
-			function setPeerMessage(message) {
-				document.getElementById('peer-message').textContent = message;
-			}
-
-			function syncPeerControls() {
-				const inRoom = Boolean(duel.peer);
-				document.querySelector('.peer-controls').hidden = inRoom;
-				document.getElementById('peer-room').hidden = !inRoom;
-				document.getElementById('start-duel').disabled = duel.role !== 'host' || !duel.connection?.open || duel.active;
-				document.getElementById('start-duel').textContent = duel.matchId ? 'もう一度対戦' : '対戦を開始';
-				document.getElementById('new-game').disabled = inRoom;
-				document.getElementById('reset').disabled = inRoom;
-				updateNumberPad();
-			}
-
-			function createPeerConnection(connection) {
-				duel.connection = connection;
-				connection.on('open', () => {
-					setPeerStatus('対戦相手と接続しました');
-					if (duel.role === 'guest') connection.send({ type: 'hello', name: duel.name });
-					else setPeerMessage('対戦相手が参加しました。開始できます。');
-					syncPeerControls();
-				});
-				connection.on('data', (data) => handlePeerMessage(data));
-				connection.on('close', () => {
-					setPeerStatus('相手との接続が切れました');
-					setPeerMessage('接続が終了しました。「退出」して部屋を作り直してください。');
-					document.getElementById('start-duel').disabled = true;
-				});
-				connection.on('error', () => setPeerStatus('通信エラーが発生しました'));
-			}
-
-			function handlePeerMessage(data) {
-				if (!data || typeof data !== 'object') return;
-				if (data.type === 'hello' && duel.role === 'host') {
-					duel.opponentName = String(data.name || '対戦相手').slice(0, 18);
-					duel.connection.send({ type: 'welcome', name: duel.name });
-					setPeerMessage(`${duel.opponentName} さんが参加しました。開始できます。`);
-					document.getElementById('start-duel').disabled = false;
-					return;
-				}
-				if (data.type === 'welcome' && duel.role === 'guest') {
-					duel.opponentName = String(data.name || 'ホスト').slice(0, 18);
-					setPeerMessage(`${duel.opponentName} さんの開始を待っています。`);
-					return;
-				}
-				if (data.type === 'start' && duel.role === 'guest') {
-					if (!Array.isArray(data.puzzle) || !Array.isArray(data.solution) || data.puzzle.length !== CELLS || data.solution.length !== CELLS) return;
-					if (![...data.puzzle, ...data.solution].every((n) => Number.isInteger(n) && n >= 0 && n <= 9)) return;
-					beginDuelGame(data);
-					return;
-				}
-				if (data.matchId !== duel.matchId) return;
-				if (data.type === 'progress') {
-					const total = CELLS - puzzle.filter((n) => n !== 0).length;
-					document.getElementById('peer-progress').hidden = false;
-					document.getElementById('peer-progress').textContent = `${duel.opponentName || '相手'}：入力 ${Math.min(total, Number(data.filled) || 0)} / ${total} マス`;
-				} else if (data.type === 'finish') {
-					duel.opponentResult = { solved: data.solved === true, time: Number(data.time) || 0 };
-					updateDuelResult();
-				}
-			}
-
-			function sendProgress() {
-				if (!duel.active || !duel.connection?.open) return;
-				const filled = values.reduce((count, value, index) => count + (puzzle[index] === 0 && value !== 0 ? 1 : 0), 0);
-				duel.connection.send({ type: 'progress', matchId: duel.matchId, filled });
-			}
-
-			function beginDuelGame(data) {
-				puzzle = data.puzzle.slice();
-				solution = data.solution.slice();
-				values = puzzle.slice();
-				notes = Array.from({ length: CELLS }, () => new Set());
-				history = [];
-				selected = -1;
-				checked = false;
-				finished = false;
-				duel.active = true;
-				duel.matchId = String(data.matchId);
-				duel.startAt = Number(data.startAt) || Date.now();
-				duel.localResult = null;
-				duel.opponentResult = null;
-				difficultyElement.value = data.difficulty || 'normal';
-				document.getElementById('peer-progress').hidden = false;
-				document.getElementById('peer-progress').textContent = `対戦相手：${duel.opponentName || '接続中'} · 同じ問題に挑戦中`;
-				renderBoard();
-				startTimer(duel.startAt);
-				setStatus('対戦開始まで少々お待ちください。');
-				syncPeerControls();
-			}
-
-			function startDuel() {
-				if (duel.role !== 'host' || !duel.connection?.open || duel.active) return;
-				const generated = makePuzzle(difficultyElement.value);
-				const data = {
-					type: 'start',
-					matchId: `${Date.now()}-${randomRoomCode()}`,
-					startAt: Date.now() + 3000,
-					difficulty: difficultyElement.value,
-					puzzle: generated.question,
-					solution: generated.answer
-				};
-				duel.matchId = data.matchId;
-				duel.opponentName = duel.opponentName || '対戦相手';
-				duel.connection.send(data);
-				beginDuelGame(data);
-				setPeerMessage('同じ問題で対戦中です。');
-				syncPeerControls();
-			}
-
-			function updateDuelResult() {
-				if (!duel.active || !duel.localResult) return;
-				if (!duel.opponentResult) {
-					setStatus(`クリア！ タイム ${formatTime(duel.localResult.time)}。相手の結果を待っています…`, 'success');
-					setPeerMessage(`${duel.opponentName || '相手'} の解答を待っています。`);
-					return;
-				}
-				duel.active = false;
-				const localWon = duel.localResult.solved && (!duel.opponentResult.solved || duel.localResult.time <= duel.opponentResult.time);
-				const message = localWon ? '対戦クリア！ あなたの勝ちです 🎉' : duel.opponentResult.solved ? '対戦終了。相手の勝ちです。' : '対戦終了。今回は両者とも未クリアです。';
-				setStatus(`${message}（あなた ${formatTime(duel.localResult.time)} ／ 相手 ${formatTime(duel.opponentResult.time)}）`, localWon ? 'success' : 'warning');
-				setPeerMessage(message);
-				setPeerStatus('対戦結果が出ました');
-				syncPeerControls();
-			}
-
-			function closePeerRoom() {
-				clearInterval(clock);
-				if (duel.peer) duel.peer.destroy();
-				duel = { peer: null, connection: null, role: '', name: '', opponentName: '', active: false, matchId: '', localResult: null, opponentResult: null, startAt: 0 };
-				document.getElementById('peer-progress').hidden = true;
-				document.getElementById('peer-progress').textContent = '';
-				setPeerStatus('オフライン対戦中');
-				setPeerMessage('相手の参加を待っています。');
-				finished = false;
-				syncPeerControls();
-				updateBoard();
-			}
-
-			function createRoom() {
-				if (typeof Peer === 'undefined') {
-					setPeerStatus('PeerJSを読み込めません。ネット接続を確認してください');
-					return;
-				}
-				const nameInput = document.getElementById('peer-name');
-				duel.name = nameInput.value.trim() || 'プレイヤー';
-				duel.role = 'host';
-				setPeerStatus('6桁コードを準備しています…');
-				const code = randomRoomCode();
-				duel.peer = new Peer(code);
-				duel.peer.on('open', (id) => {
-					document.getElementById('peer-code').textContent = id;
-					setPeerStatus('部屋を作成しました');
-					setPeerMessage('相手の参加を待っています。');
-					syncPeerControls();
-				});
-				duel.peer.on('connection', (connection) => {
-					if (duel.connection) { connection.close(); return; }
-					createPeerConnection(connection);
-				});
-				duel.peer.on('error', (error) => {
-					setPeerStatus(error.type === 'unavailable-id' ? 'コードが使用中です。退出して作り直してください' : `接続エラー：${error.type || '通信失敗'}`);
-				});
-				syncPeerControls();
-			}
-
-			function joinRoom() {
-				if (typeof Peer === 'undefined') {
-					setPeerStatus('PeerJSを読み込めません。ネット接続を確認してください');
-					return;
-				}
-				const code = document.getElementById('peer-code-input').value.trim();
-				if (!/^\d{6}$/.test(code)) { setPeerStatus('6桁の数字コードを入力してください'); return; }
-				duel.name = document.getElementById('peer-name').value.trim() || 'プレイヤー';
-				duel.role = 'guest';
-				setPeerStatus(`${code} に接続しています…`);
-				duel.peer = new Peer();
-				duel.peer.on('open', () => createPeerConnection(duel.peer.connect(code, { reliable: true })));
-				duel.peer.on('error', (error) => setPeerStatus(error.type === 'peer-unavailable' ? '部屋が見つかりません。コードを確認してください' : `接続エラー：${error.type || '通信失敗'}`));
-				syncPeerControls();
-			}
-
-			document.getElementById('host-room').addEventListener('click', createRoom);
-			document.getElementById('join-room').addEventListener('click', joinRoom);
-			document.getElementById('start-duel').addEventListener('click', startDuel);
-			document.getElementById('leave-room').addEventListener('click', closePeerRoom);
-			document.getElementById('peer-code-input').addEventListener('input', (event) => {
-				event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6);
-			});
-
-			function newGame() {
-				const generated = makePuzzle(difficultyElement.value);
-				puzzle = generated.question;
-				solution = generated.answer;
-				values = puzzle.slice();
-				notes = Array.from({ length: CELLS }, () => new Set());
-				history = [];
-				selected = -1;
-				checked = false;
-				finished = false;
-				renderBoard();
-				startTimer();
-				setStatus('マスを選んで、数字を入れてみましょう。');
-			}
-
-			function resetGame() {
-				values = puzzle.slice();
-				notes = Array.from({ length: CELLS }, () => new Set());
-				history = [];
-				checked = false;
-				finished = false;
-				renderBoard();
-				startTimer();
-				setStatus('問題を最初の状態にもどしました。');
-			}
-
-			document.getElementById('new-game').addEventListener('click', newGame);
-			document.getElementById('reset').addEventListener('click', resetGame);
-			document.getElementById('clear').addEventListener('click', clearSelected);
-			document.getElementById('undo').addEventListener('click', undo);
-			document.getElementById('check').addEventListener('click', checkBoard);
-			document.getElementById('memo').addEventListener('click', (event) => {
-				memoMode = !memoMode;
-				event.currentTarget.classList.toggle('active', memoMode);
-				event.currentTarget.setAttribute('aria-pressed', String(memoMode));
-				event.currentTarget.textContent = `✎ メモ：${memoMode ? 'オン' : 'オフ'}`;
-			});
-
-			document.addEventListener('keydown', (event) => {
-				if (event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName))) return;
-				if (/^[1-9]$/.test(event.key)) {
-					event.preventDefault();
-					enterNumber(Number(event.key));
-					return;
-				}
-				if (event.key === 'Backspace' || event.key === 'Delete' || event.key === '0') {
-					event.preventDefault();
-					clearSelected();
-					return;
-				}
-				if (event.key === 'Escape') {
-					selected = -1;
-					updateBoard();
-					return;
-				}
-				if (selected < 0 || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-				event.preventDefault();
-				const row = rowOf(selected);
-				const col = colOf(selected);
-				const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
-				const [dr, dc] = moves[event.key];
-				selected = ((row + dr + SIZE) % SIZE) * SIZE + ((col + dc + SIZE) % SIZE);
-				updateBoard();
-				boardElement.children[selected].focus({ preventScroll: true });
-			});
-
-			createNumberPad();
-			newGame();
-		})();
-	</script>
+    // 【受信側】データを受け取ったときの処理
+    peer.on('connection', (conn) => {
+        conn.on('data', (data) => {
+            document.getElementById('info-display').innerText = data;
+        });
+    });
+</script>
 </body>
 </html>
