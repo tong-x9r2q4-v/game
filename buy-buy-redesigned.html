@@ -1,0 +1,3286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Buy-Buy</title>
+
+  <!-- QRコード生成・読み取り -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+  <style>
+    :root {
+      --bg: #f4f6fa;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --primary: #0f172a;
+      --primary-2: #1e293b;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --green: #059669;
+      --green-soft: #ecfdf5;
+      --red: #dc2626;
+      --shadow: 0 18px 50px rgba(15, 23, 42, .10);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(37, 99, 235, .08), transparent 30%),
+        radial-gradient(circle at 100% 100%, rgba(5, 150, 105, .06), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .screen {
+      min-height: 100vh;
+      min-height: 100svh;
+    }
+
+    /* =========================
+       LOGIN
+    ========================= */
+    #loginScreen {
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .login-shell {
+      width: min(100%, 850px);
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      background: var(--surface);
+      border-radius: 30px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(226, 232, 240, .8);
+    }
+
+    .login-brand {
+      min-height: 620px;
+      padding: 44px;
+      color: white;
+      background: linear-gradient(145deg, #0f172a, #1e293b 60%, #334155);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .brand-mark {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      background: white;
+      color: var(--primary);
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -2px;
+    }
+
+    .login-brand h1 {
+      margin: 28px 0 12px;
+      font-size: 48px;
+      letter-spacing: -2px;
+    }
+
+    .login-brand p {
+      margin: 0;
+      color: rgba(255,255,255,.72);
+      line-height: 1.8;
+    }
+
+    .brand-note {
+      color: rgba(255,255,255,.48);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .login-card {
+      padding: 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 14px;
+      margin-bottom: 26px;
+    }
+
+    .auth-tab {
+      border: 0;
+      background: transparent;
+      min-height: 44px;
+      border-radius: 11px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .auth-tab.active {
+      background: white;
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .08);
+    }
+
+    .login-card h2 {
+      margin: 0 0 8px;
+      font-size: 30px;
+    }
+
+    .lead {
+      margin: 0 0 26px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .field {
+      margin-bottom: 15px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .field input {
+      width: 100%;
+      height: 52px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0 15px;
+      outline: none;
+      background: #fbfdff;
+    }
+
+    .field input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, .10);
+      background: white;
+    }
+
+    .primary-button,
+    .login-button {
+      width: 100%;
+      min-height: 54px;
+      border: 0;
+      border-radius: 15px;
+      background: var(--primary);
+      color: white;
+      font-weight: 900;
+    }
+
+    .primary-button:hover,
+    .login-button:hover {
+      background: #020617;
+    }
+
+    .secondary-button {
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: white;
+      color: var(--text);
+      font-weight: 800;
+      padding: 0 16px;
+    }
+
+    .error {
+      min-height: 20px;
+      margin: 2px 0 8px;
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .demo-info {
+      margin-top: 16px;
+      padding: 13px 15px;
+      border-radius: 13px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    /* =========================
+       APP
+    ========================= */
+    #appScreen {
+      padding: 18px;
+    }
+
+    .app {
+      width: min(1160px, 100%);
+      min-height: calc(100vh - 36px);
+      min-height: calc(100svh - 36px);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 6px 2px 18px;
+    }
+
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .app-logo {
+      width: 45px;
+      height: 45px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: var(--primary);
+      color: white;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    .app-brand strong {
+      display: block;
+      font-size: 18px;
+    }
+
+    .app-brand span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .logout-button {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--muted);
+      border-radius: 12px;
+      min-height: 42px;
+      padding: 0 14px;
+      font-weight: 800;
+    }
+
+    .greeting {
+      text-align: center;
+      margin: 0 0 18px;
+    }
+
+    .greeting-main {
+      font-size: clamp(23px, 4vw, 32px);
+      font-weight: 900;
+      letter-spacing: -.7px;
+    }
+
+    .greeting-sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 5px;
+    }
+
+    /* =========================
+       CENTER CARD
+    ========================= */
+    .wallet-area {
+      display: flex;
+      justify-content: center;
+      margin: 4px 0 25px;
+      perspective: 1200px;
+    }
+
+    .payment-card {
+      position: relative;
+      width: min(100%, 410px);
+      aspect-ratio: 1.586 / 1;
+      min-height: 240px;
+      border-radius: 27px;
+      overflow: hidden;
+      color: white;
+      background:
+        radial-gradient(circle at 80% 15%, rgba(255,255,255,.16), transparent 28%),
+        linear-gradient(135deg, #0f172a 0%, #1e293b 48%, #334155 100%);
+      box-shadow: 0 25px 55px rgba(15, 23, 42, .22);
+      border: 1px solid rgba(255,255,255,.12);
+      transform: translateZ(0);
+      transition: transform .2s, box-shadow .2s;
+      cursor: pointer;
+    }
+
+    .payment-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 30px 65px rgba(15, 23, 42, .25);
+    }
+
+    .payment-card::after {
+      content: "";
+      position: absolute;
+      width: 210px;
+      height: 210px;
+      right: -80px;
+      bottom: -95px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 0 0 24px rgba(255,255,255,.035), 0 0 0 48px rgba(255,255,255,.025);
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      padding: 25px 27px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-name {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: .5px;
+    }
+
+    .contactless {
+      font-size: 23px;
+      opacity: .9;
+      transform: rotate(90deg);
+    }
+
+    .chip {
+      width: 45px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #d9dee5, #8d98a7);
+      position: relative;
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
+    .chip::before,
+    .chip::after {
+      content: "";
+      position: absolute;
+      border: 1px solid rgba(15,23,42,.28);
+    }
+
+    .chip::before {
+      left: 15px;
+      top: 0;
+      bottom: 0;
+      width: 14px;
+      border-top: 0;
+      border-bottom: 0;
+    }
+
+    .chip::after {
+      left: 0;
+      right: 0;
+      top: 10px;
+      height: 12px;
+      border-left: 0;
+      border-right: 0;
+    }
+
+    .balance-label {
+      font-size: 11px;
+      color: rgba(255,255,255,.62);
+      margin-bottom: 4px;
+    }
+
+    .balance {
+      font-size: clamp(28px, 6vw, 40px);
+      font-weight: 900;
+      letter-spacing: -1.2px;
+    }
+
+    .card-bottom {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-id {
+      font-size: 12px;
+      color: rgba(255,255,255,.64);
+    }
+
+    .tap-hint {
+      font-size: 11px;
+      color: rgba(255,255,255,.72);
+      text-align: right;
+    }
+
+    /* =========================
+       MAIN ACTIONS
+    ========================= */
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .action {
+      min-height: 104px;
+      border: 1px solid var(--line);
+      border-radius: 19px;
+      background: white;
+      box-shadow: 0 8px 25px rgba(15,23,42,.045);
+      padding: 15px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .action:hover {
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+    }
+
+    .action-icon {
+      width: 39px;
+      height: 39px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--surface-2);
+      font-size: 20px;
+    }
+
+    .action strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 15px;
+    }
+
+    .action small {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    /* =========================
+       CONTENT
+    ========================= */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px;
+      padding-bottom: 20px;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 25px rgba(15,23,42,.035);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .panel-header h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 10px 0;
+    }
+
+    .friend-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .friend-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 11px;
+      border-radius: 14px;
+      background: #f8fafc;
+    }
+
+    .friend-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      background: #e2e8f0;
+      font-weight: 900;
+    }
+
+    .friend-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .friend-info strong,
+    .friend-info span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .friend-info strong {
+      font-size: 13px;
+    }
+
+    .friend-info span {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .mini-button {
+      border: 0;
+      border-radius: 11px;
+      min-height: 38px;
+      padding: 0 12px;
+      background: var(--primary);
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .security {
+      display: grid;
+      gap: 10px;
+    }
+
+    .security-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 11px 12px;
+      border-radius: 13px;
+      background: var(--green-soft);
+      color: #065f46;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .transactions {
+      display: grid;
+      gap: 9px;
+    }
+
+    .transaction {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .transaction:last-child {
+      border-bottom: 0;
+    }
+
+    .transaction-title {
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .transaction-date {
+      color: var(--muted);
+      font-size: 10px;
+      margin-top: 3px;
+    }
+
+    .transaction-amount {
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .income {
+      color: var(--green);
+    }
+
+    .expense {
+      color: var(--red);
+    }
+
+    /* =========================
+       MODAL
+    ========================= */
+    .page-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 0 auto 22px;
+      padding: 6px;
+      background: rgba(255,255,255,.75);
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      max-width: 620px;
+      box-shadow: 0 8px 24px rgba(15,23,42,.06);
+    }
+
+    .page-tab {
+      flex: 1;
+      min-height: 48px;
+      border: 0;
+      border-radius: 13px;
+      background: transparent;
+      color: #64748b;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .page-tab.active {
+      background: #111827;
+      color: white;
+      box-shadow: 0 6px 16px rgba(15,23,42,.18);
+    }
+
+    .page-view.hidden { display: none !important; }
+
+    .account-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .account-info-card, .account-action-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 12px 32px rgba(15,23,42,.07);
+    }
+
+    .account-info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 14px 0;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .account-info-row:last-child { border-bottom: 0; }
+    .account-info-row span { color: #64748b; }
+    .account-info-row strong { text-align: right; overflow-wrap: anywhere; }
+
+    .account-action-card h3 { margin-top: 0; }
+    .account-action-card p { color: #64748b; line-height: 1.7; }
+
+    @media (max-width: 720px) {
+      .account-grid { grid-template-columns: 1fr; }
+      .page-tabs { margin-left: 12px; margin-right: 12px; }
+    }
+
+    .receive-notifications {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .receive-notification {
+      padding: 16px;
+      border-radius: 16px;
+      background: #eef6ff;
+      border: 1px solid #cfe3ff;
+      font-weight: 800;
+      line-height: 1.6;
+    }
+
+    .receive-notification small {
+      display: block;
+      margin-top: 4px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .receive-request-box {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 18px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+    }
+
+    .receive-request-box h4 {
+      margin: 0 0 5px;
+      font-size: 18px;
+    }
+
+    .receive-request-box p {
+      margin: 0 0 14px;
+      color: #64748b;
+    }
+
+    .business-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .business-card, .business-panel {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 12px 32px rgba(15,23,42,.07);
+    }
+
+    .business-card {
+      background: linear-gradient(145deg, #111827, #334155);
+      color: white;
+    }
+
+    .business-label {
+      font-size: 11px;
+      letter-spacing: .18em;
+      opacity: .7;
+      font-weight: 900;
+    }
+
+    .business-name {
+      font-size: 28px;
+      font-weight: 900;
+      margin: 12px 0 8px;
+      overflow-wrap: anywhere;
+    }
+
+    .business-id {
+      font-size: 12px;
+      opacity: .75;
+      overflow-wrap: anywhere;
+    }
+
+    .business-role {
+      margin-top: 20px;
+      display: inline-block;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .business-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .business-stat {
+      padding: 18px;
+      border: 1px solid #e5e7eb;
+      border-radius: 17px;
+      background: #f8fafc;
+    }
+
+    .business-stat span {
+      display: block;
+      color: #64748b;
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .business-stat strong {
+      font-size: 23px;
+      font-weight: 900;
+    }
+
+    .business-people {
+      display: grid;
+      gap: 9px;
+    }
+
+    .business-person {
+      padding: 11px 13px;
+      border-radius: 13px;
+      background: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .business-qr {
+      display: grid;
+      place-items: center;
+      min-height: 250px;
+      background: #f8fafc;
+      border-radius: 18px;
+    }
+
+    #businessQr {
+      width: 220px;
+      height: 220px;
+      display: grid;
+      place-items: center;
+      background: white;
+      padding: 10px;
+      border-radius: 15px;
+    }
+
+    #businessQr img, #businessQr canvas {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .business-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 13px;
+    }
+
+    .business-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .business-list-item {
+      padding: 15px;
+      border: 1px solid #e5e7eb;
+      border-radius: 17px;
+      background: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .business-list-item strong {
+      display: block;
+      overflow-wrap: anywhere;
+    }
+
+    .business-list-item small {
+      display: block;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 720px) {
+      .business-grid { grid-template-columns: 1fr; }
+      .business-stats { grid-template-columns: 1fr; }
+    }
+
+    .user-picker{display:grid;gap:8px;max-height:220px;overflow-y:auto;margin:10px 0 14px}
+    .user-choice{width:100%;border:1px solid #e5e7eb;background:#f8fafc;border-radius:14px;padding:12px 14px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+    .user-choice.selected{border-color:#111827;background:#eef2ff}
+    .user-choice strong{display:block}.user-choice small{color:#64748b}
+    .keypad-display{text-align:center;font-size:32px;font-weight:900;padding:14px;border-radius:16px;background:#f8fafc;margin:12px 0}
+    .amount-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+    .amount-keypad button{min-height:58px;border:0;border-radius:15px;background:#f1f5f9;font-size:22px;font-weight:900;cursor:pointer}
+    .amount-keypad .key-clear{background:#fee2e2}.amount-keypad .key-back{background:#e2e8f0}
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(15,23,42,.58);
+      backdrop-filter: blur(7px);
+    }
+
+    .modal {
+      width: min(100%, 520px);
+      max-height: min(90vh, 780px);
+      overflow: auto;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.25);
+      padding: 22px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 21px;
+    }
+
+    .modal-header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .close-button {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 11px;
+      background: #f1f5f9;
+      color: var(--text);
+      font-size: 20px;
+      flex: 0 0 auto;
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    .modal-actions .primary-button,
+    .modal-actions .secondary-button {
+      width: 100%;
+    }
+
+    /* =========================
+       QR DISPLAY
+    ========================= */
+    .qr-box {
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      border-radius: 18px;
+      background: #f8fafc;
+      margin-bottom: 15px;
+    }
+
+    #myQr {
+      width: 230px;
+      height: 230px;
+      display: grid;
+      place-items: center;
+      background: white;
+      padding: 10px;
+      border-radius: 15px;
+    }
+
+    #myQr img,
+    #myQr canvas {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .qr-id {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    /* =========================
+       QR SCANNER
+    ========================= */
+    .scanner {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      max-height: 430px;
+      overflow: hidden;
+      border-radius: 18px;
+      background: #020617;
+      margin-bottom: 13px;
+    }
+
+    #qrVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #qrCanvas {
+      display: none;
+    }
+
+    .scanner-frame {
+      position: absolute;
+      inset: 15%;
+      border: 3px solid rgba(255,255,255,.92);
+      border-radius: 20px;
+      box-shadow: 0 0 0 999px rgba(0,0,0,.20);
+      pointer-events: none;
+    }
+
+    .scanner-line {
+      position: absolute;
+      left: 17%;
+      right: 17%;
+      top: 50%;
+      height: 2px;
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 0 12px rgba(255,255,255,.7);
+      animation: scanline 1.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes scanline {
+      0%, 100% { transform: translateY(-100px); opacity: .55; }
+      50% { transform: translateY(100px); opacity: 1; }
+    }
+
+    .scanner-status {
+      padding: 11px 13px;
+      border-radius: 12px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .scanner-status.success {
+      background: var(--green-soft);
+      color: #065f46;
+    }
+
+    .scanner-status.error {
+      background: #fef2f2;
+      color: #991b1b;
+      min-height: 0;
+      margin: 0;
+    }
+
+    .scan-result {
+      margin-top: 11px;
+      padding: 13px;
+      border-radius: 13px;
+      background: var(--blue-soft);
+      color: #1e40af;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* =========================
+       FRIEND REGISTER
+    ========================= */
+    .friend-scan-note {
+      padding: 12px 14px;
+      border-radius: 13px;
+      background: var(--blue-soft);
+      color: #1e40af;
+      font-size: 12px;
+      line-height: 1.6;
+      margin-bottom: 13px;
+    }
+
+    .confirm-box {
+      padding: 13px 14px;
+      border-radius: 13px;
+      background: #f8fafc;
+      margin-bottom: 12px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .confirm-box strong {
+      font-size: 15px;
+    }
+
+    /* =========================
+       RESPONSIVE
+    ========================= */
+    @media (max-width: 850px) {
+      .login-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .login-brand {
+        min-height: auto;
+        padding: 32px;
+      }
+
+      .login-brand h1 {
+        font-size: 40px;
+      }
+
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 700px) {
+      #appScreen {
+        padding: 12px;
+      }
+
+      .actions {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .payment-card {
+        width: min(100%, 390px);
+        min-height: 225px;
+      }
+
+      .content-grid {
+        gap: 12px;
+      }
+
+      .login-card {
+        padding: 30px 24px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .login-brand {
+        padding: 27px 24px;
+      }
+
+      .login-brand p {
+        font-size: 13px;
+      }
+
+      .greeting-main {
+        font-size: 24px;
+      }
+
+      .payment-card {
+        min-height: 215px;
+      }
+
+      .card-inner {
+        padding: 21px 22px;
+      }
+
+      .balance {
+        font-size: 31px;
+      }
+
+      .modal {
+        padding: 17px;
+        border-radius: 20px;
+      }
+    }
+
+    /* =========================
+       Buy-Buy Refresh — visual layer
+       元の画面構成・JavaScript機能は維持
+    ========================= */
+    :root {
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-2: #f0f5ff;
+      --text: #172033;
+      --muted: #6b7488;
+      --line: #e5eaf3;
+      --primary: #2457e6;
+      --primary-2: #1744c5;
+      --blue: #2457e6;
+      --blue-soft: #edf3ff;
+      --green: #078b68;
+      --green-soft: #e9f8f2;
+      --red: #d94354;
+      --shadow: 0 18px 48px rgba(28, 48, 91, .09);
+      --radius: 22px;
+    }
+
+    body {
+      background:
+        radial-gradient(ellipse at 8% 0%, rgba(72, 116, 255, .10), transparent 32%),
+        radial-gradient(ellipse at 100% 25%, rgba(104, 167, 255, .08), transparent 28%),
+        #f5f7fb;
+      color: var(--text);
+      letter-spacing: -.01em;
+    }
+
+    button, input { font-family: inherit; }
+    button { transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease; }
+    button:active { transform: scale(.985); }
+
+    #loginScreen { padding: clamp(16px, 4vw, 42px); }
+    .login-shell {
+      width: min(100%, 940px);
+      border: 1px solid rgba(224, 231, 243, .9);
+      border-radius: 28px;
+      box-shadow: 0 28px 90px rgba(24, 43, 84, .14);
+    }
+    .login-brand {
+      position: relative;
+      overflow: hidden;
+      min-height: 600px;
+      padding: clamp(28px, 4vw, 48px);
+      background: linear-gradient(150deg, #183ca8 0%, #2457e6 52%, #4387ff 100%);
+    }
+    .login-brand::before,
+    .login-brand::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.16);
+    }
+    .login-brand::before {
+      width: 330px; height: 330px; right: -150px; top: 90px;
+      box-shadow: 0 0 0 32px rgba(255,255,255,.035), 0 0 0 70px rgba(255,255,255,.025);
+    }
+    .login-brand::after {
+      width: 180px; height: 180px; right: 20px; bottom: 40px;
+      background: rgba(255,255,255,.035);
+    }
+    .login-brand > * { position: relative; z-index: 1; }
+    .brand-mark {
+      border-radius: 18px;
+      color: #2457e6;
+      box-shadow: 0 10px 26px rgba(0,0,0,.12);
+    }
+    .login-brand h1 { font-size: clamp(40px, 5vw, 54px); letter-spacing: -2.5px; }
+    .login-card { padding: clamp(26px, 4vw, 48px); }
+    .auth-tabs { background: #f0f3f9; border-radius: 13px; }
+    .auth-tab { border-radius: 10px; }
+    .auth-tab.active { color: #2457e6; box-shadow: 0 3px 12px rgba(25, 48, 105, .10); }
+    .login-card h2 { letter-spacing: -.8px; }
+    .field input {
+      border-radius: 13px;
+      background: #fbfcff;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    .field input:focus { border-color: #5480ff; box-shadow: 0 0 0 4px rgba(36,87,230,.10); }
+    .primary-button, .login-button {
+      border-radius: 13px;
+      background: linear-gradient(135deg, #2457e6, #3977ff);
+      box-shadow: 0 8px 18px rgba(36,87,230,.18);
+    }
+    .primary-button:hover, .login-button:hover {
+      background: linear-gradient(135deg, #1b48cf, #2868f2);
+      box-shadow: 0 10px 24px rgba(36,87,230,.25);
+    }
+    .secondary-button, .logout-button {
+      border-radius: 12px;
+      border-color: #e1e7f1;
+    }
+    .secondary-button:hover, .logout-button:hover { background: #f3f6fc; border-color: #cbd6e8; }
+
+    #appScreen { padding: clamp(12px, 2.5vw, 28px); }
+    .app { width: min(1200px, 100%); }
+    .topbar {
+      padding: 8px 0 22px;
+      border-bottom: 1px solid rgba(220, 228, 241, .8);
+      margin-bottom: 24px;
+    }
+    .app-logo {
+      background: linear-gradient(140deg, #2457e6, #4786ff);
+      border-radius: 14px;
+      box-shadow: 0 7px 18px rgba(36,87,230,.20);
+    }
+    .app-brand strong { letter-spacing: -.4px; }
+    .greeting { text-align: left; margin: 0 0 20px; }
+    .greeting-main { letter-spacing: -1px; }
+    .greeting-sub { margin-top: 7px; }
+
+    .page-tabs {
+      justify-content: flex-start;
+      max-width: none;
+      width: fit-content;
+      margin: 0 0 24px;
+      padding: 5px;
+      background: rgba(255,255,255,.84);
+      border-color: #e6ebf4;
+      border-radius: 15px;
+      box-shadow: 0 5px 18px rgba(26,46,90,.045);
+    }
+    .page-tab { min-width: 112px; border-radius: 11px; font-size: 14px; }
+    .page-tab.active {
+      background: #2457e6;
+      box-shadow: 0 5px 14px rgba(36,87,230,.20);
+    }
+
+    .wallet-area { justify-content: flex-start; margin: 0 0 28px; }
+    .payment-card {
+      width: min(100%, 540px);
+      min-height: 270px;
+      aspect-ratio: 1.78 / 1;
+      border-radius: 25px;
+      background:
+        radial-gradient(circle at 88% 14%, rgba(255,255,255,.22), transparent 24%),
+        radial-gradient(circle at 10% 100%, rgba(70,139,255,.32), transparent 38%),
+        linear-gradient(125deg, #142c72 0%, #2457e6 58%, #4385ff 100%);
+      box-shadow: 0 22px 45px rgba(34, 74, 178, .22);
+    }
+    .payment-card::after {
+      width: 250px; height: 250px; right: -70px; bottom: -140px;
+      border-color: rgba(255,255,255,.18);
+      box-shadow: 0 0 0 28px rgba(255,255,255,.045), 0 0 0 58px rgba(255,255,255,.03);
+    }
+    .card-inner { padding: 28px 30px; }
+    .card-name { font-size: 18px; letter-spacing: .2px; }
+    .balance-label { color: rgba(255,255,255,.75); font-size: 12px; }
+    .balance { font-size: clamp(32px, 5vw, 44px); letter-spacing: -1.6px; }
+    .chip { background: linear-gradient(135deg, #f0dca3, #bba66e); }
+
+    .section-title { font-size: 17px; letter-spacing: -.3px; margin-bottom: 14px; }
+    .actions { gap: 14px; margin-bottom: 28px; }
+    .action {
+      min-height: 118px;
+      padding: 17px;
+      border-color: #e7ecf5;
+      border-radius: 18px;
+      box-shadow: 0 6px 20px rgba(26,46,90,.035);
+    }
+    .action:hover {
+      border-color: #c7d6ff;
+      box-shadow: 0 12px 26px rgba(36,87,230,.09);
+      transform: translateY(-2px);
+    }
+    .action-icon {
+      width: 42px; height: 42px; border-radius: 13px;
+      color: #2457e6; background: #edf3ff; font-size: 21px;
+    }
+    .action:nth-child(2) .action-icon { color: #078b68; background: #e9f8f2; }
+    .action:nth-child(3) .action-icon { color: #8b5bd6; background: #f3edff; }
+    .action:nth-child(4) .action-icon { color: #d97706; background: #fff4df; }
+    .action strong { font-size: 15px; }
+    .action small { display: block; margin-top: 4px; }
+
+    .content-grid { gap: 18px; }
+    .panel, .account-info-card, .account-action-card, .business-panel {
+      border-color: #e5eaf3;
+      border-radius: 19px;
+      box-shadow: 0 7px 24px rgba(26,46,90,.04);
+    }
+    .panel { padding: 22px; }
+    .panel-header h3 { letter-spacing: -.3px; }
+    .friend-item { background: #f6f8fc; }
+    .friend-avatar { color: #2457e6; background: #e8efff; }
+    .mini-button { background: #2457e6; border-radius: 10px; }
+    .mini-button:hover { background: #1744c5; }
+    .security-row { border: 1px solid #d6f1e5; }
+    .transaction { border-bottom-color: #edf1f7; }
+
+    .account-info-card, .account-action-card, .business-panel, .business-card {
+      border-radius: 19px;
+      padding: clamp(18px, 2.5vw, 26px);
+    }
+    .account-action-card h3, .account-info-card h3, .business-panel h3 { letter-spacing: -.4px; }
+    .business-card {
+      background:
+        radial-gradient(circle at 100% 0%, rgba(255,255,255,.15), transparent 28%),
+        linear-gradient(135deg, #173a9e, #2457e6 60%, #4385ff);
+      box-shadow: 0 16px 35px rgba(36,87,230,.17);
+    }
+    .business-stat { background: #f7f9fd; border-color: #e7ecf5; }
+    .business-qr, .qr-box { background: #f5f7fc; }
+    .business-list-item { border-color: #e6ebf4; border-radius: 15px; }
+
+    .modal-backdrop { background: rgba(13, 24, 51, .55); backdrop-filter: blur(9px); }
+    .modal {
+      border: 1px solid rgba(255,255,255,.7);
+      border-radius: 22px;
+      box-shadow: 0 28px 90px rgba(6, 18, 48, .28);
+    }
+    .close-button { border-radius: 12px; }
+    .close-button:hover { background: #e7edf8; }
+    .keypad-display { background: #f0f5ff; color: #2457e6; }
+    .amount-keypad button { border: 1px solid #e6ebf4; background: #f7f9fd; border-radius: 13px; }
+    .amount-keypad button:hover { background: #edf3ff; border-color: #c9d8ff; }
+    .amount-keypad .key-clear { background: #fff0f0; color: #c93648; }
+    .amount-keypad .key-back { background: #edf1f8; }
+    .user-choice { border-color: #e4eaf4; background: #f8faff; }
+    .user-choice:hover, .user-choice.selected { border-color: #8daaff; background: #edf3ff; }
+
+    @media (max-width: 850px) {
+      .login-brand { min-height: auto; }
+      .login-brand::before { top: 20px; }
+      .topbar { margin-bottom: 20px; }
+      .wallet-area { justify-content: center; }
+      .greeting { text-align: center; }
+      .page-tabs { margin-left: auto; margin-right: auto; }
+    }
+    @media (max-width: 700px) {
+      .page-tabs { width: 100%; }
+      .page-tab { min-width: 0; padding: 0 8px; }
+      .actions { gap: 10px; }
+      .action { min-height: 106px; padding: 14px; }
+      .payment-card { min-height: 220px; }
+      .card-inner { padding: 22px; }
+      .panel { padding: 17px; }
+    }
+    @media (max-width: 480px) {
+      #loginScreen { padding: 12px; }
+      .login-shell { border-radius: 22px; }
+      .login-brand { padding: 24px; }
+      .login-brand h1 { font-size: 38px; margin-top: 20px; }
+      .login-card { padding: 24px 20px; }
+      .topbar { gap: 8px; }
+      .app-brand span { font-size: 10px; }
+      .logout-button { padding: 0 10px; }
+      .payment-card { min-height: 205px; }
+      .balance { font-size: 30px; }
+      .card-inner { padding: 19px; }
+      .modal { border-radius: 19px; }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- =========================
+       LOGIN / REGISTER
+  ========================== -->
+  <section id="loginScreen" class="screen">
+    <div class="login-shell">
+
+      <div class="login-brand">
+        <div>
+          <div class="brand-mark">BB</div>
+          <h1>Buy-Buy</h1>
+          <p>
+            支払う。請求する。受け取る。送る。<br>
+            QRコードでかんたんにつながる決済サービス。
+          </p>
+        </div>
+
+        <div class="brand-note">
+          ※現在はブラウザ上で動くプロトタイプです。<br>
+          実際のお金を送る決済サービスではありません。
+        </div>
+      </div>
+
+      <div class="login-card">
+        <div class="auth-tabs">
+          <button id="loginTab" class="auth-tab active" type="button">ログイン</button>
+          <button id="registerTab" class="auth-tab" type="button">新規登録</button>
+        </div>
+
+        <!-- LOGIN -->
+        <form id="loginForm">
+          <h2>おかえりなさい</h2>
+          <p class="lead">Buy-Buyにログインしてください。</p>
+
+          <div class="field">
+            <label for="loginId">ID</label>
+            <input id="loginId" autocomplete="username" placeholder="IDを入力">
+          </div>
+
+          <div class="field">
+            <label for="loginPassword">パスワード</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワードを入力">
+          </div>
+
+          <div id="loginError" class="error"></div>
+          <button class="login-button" type="submit">ログイン</button>
+
+          <div class="demo-info">
+            デモアカウント：ID <strong>demo</strong> ／ パスワード <strong>1234</strong>
+          </div>
+        </form>
+
+        <!-- REGISTER -->
+        <form id="registerForm" class="hidden">
+          <h2>新しく始める</h2>
+          <p class="lead">Buy-Buyアカウントを作成してください。</p>
+
+          <div class="field">
+            <label for="regName">名前</label>
+            <input id="regName" placeholder="本名など">
+          </div>
+
+          <div class="field">
+            <label for="regDisplayName">表示名</label>
+            <input id="regDisplayName" placeholder="みんなに表示する名前">
+          </div>
+
+          <div class="field">
+            <label for="regId">ID</label>
+            <input id="regId" autocomplete="username" placeholder="例：taro123">
+          </div>
+
+          <div class="field">
+            <label for="regPassword">パスワード</label>
+            <input id="regPassword" type="password" autocomplete="new-password" placeholder="パスワード">
+          </div>
+
+          <div class="field">
+            <label for="regPassword2">パスワード（確認）</label>
+            <input id="regPassword2" type="password" autocomplete="new-password" placeholder="もう一度入力">
+          </div>
+
+          <div id="registerError" class="error"></div>
+          <button class="login-button" type="submit">アカウントを作成</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- =========================
+       APP
+  ========================== -->
+  <section id="appScreen" class="screen hidden">
+    <div class="app">
+
+      <header class="topbar">
+        <div class="app-brand">
+          <div class="app-logo">BB</div>
+          <div>
+            <strong>Buy-Buy</strong>
+            <span>QR決済・送金サービス</span>
+          </div>
+        </div>
+
+        <button id="logoutButton" class="logout-button" type="button">ログアウト</button>
+      </header>
+
+      <div class="greeting">
+        <div id="greetingMain" class="greeting-main">こんにちは</div>
+        <div id="greetingSub" class="greeting-sub"></div>
+      </div>
+
+      <nav class="page-tabs" aria-label="メインメニュー">
+        <button id="homeTab" class="page-tab active" type="button">ホーム</button>
+        <button id="accountTab" class="page-tab" type="button">アカウント</button>
+        <button id="businessTab" class="page-tab hidden" type="button">Business</button>
+      </nav>
+
+      <div id="homeView" class="page-view">
+      <!-- 中央のカード -->
+      <div class="wallet-area">
+        <div id="paymentCard" class="payment-card" title="タップして自分のQRコードを表示">
+          <div class="card-inner">
+            <div>
+              <div class="card-top">
+                <div class="card-name">Buy-Buy</div>
+                <div class="contactless">)))</div>
+              </div>
+
+              <div class="chip"></div>
+            </div>
+
+            <div>
+              <div class="balance-label">残高</div>
+              <div id="balanceText" class="balance">0億円</div>
+            </div>
+
+            <div class="card-bottom">
+              <div id="cardUserName" class="card-id"></div>
+              <div class="tap-hint">タップで<br>QRコードを表示</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">メニュー</h2>
+
+      <div class="actions">
+        <button class="action" id="payButton" type="button">
+          <span class="action-icon">▣</span>
+          <span>
+            <strong>支払う</strong>
+            <small>QRを読み取る</small>
+          </span>
+        </button>
+
+        <button class="action" id="receiveButton" type="button">
+          <span class="action-icon">↓</span>
+          <span>
+            <strong>受け取り</strong>
+            <small>送られたお金を確認</small>
+          </span>
+        </button>
+
+        <button class="action" id="requestButton" type="button">
+          <span class="action-icon">¥</span>
+          <span>
+            <strong>請求</strong>
+            <small>ユーザーを選んで請求</small>
+          </span>
+        </button>
+
+        <button class="action" id="sendButton" type="button">
+          <span class="action-icon">→</span>
+          <span>
+            <strong>送る</strong>
+            <small>ID・フレンドへ送金</small>
+          </span>
+        </button>
+      </div>
+
+      <div class="content-grid">
+
+        <!-- フレンド -->
+        <section class="panel">
+          <div class="panel-header">
+            <h3>フレンド</h3>
+            <button id="friendRegisterButton" class="secondary-button" type="button">QRで登録</button>
+          </div>
+
+          <div id="friendList" class="friend-list"></div>
+        </section>
+
+        <!-- セキュリティ -->
+        <section class="panel">
+          <div class="panel-header">
+            <h3>セキュリティ</h3>
+          </div>
+
+          <div class="security">
+            <div class="security-row">✓ QRコードはIDだけを含みます</div>
+            <div class="security-row">✓ この端末内でアカウントを管理</div>
+            <div class="security-row">✓ 決済前に相手を確認</div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- 取引履歴 -->
+      <section class="panel" style="margin-bottom: 20px;">
+        <div class="panel-header">
+          <h3>最近の取引</h3>
+        </div>
+        <div id="transactions" class="transactions"></div>
+      </section>
+      </div>
+
+      <section id="accountView" class="page-view hidden">
+        <h2 class="section-title">アカウント</h2>
+
+        <div class="account-grid">
+          <section class="account-info-card">
+            <h3>アカウント情報</h3>
+            <div class="account-info-row"><span>名前</span><strong id="accountName">-</strong></div>
+            <div class="account-info-row"><span>表示名</span><strong id="accountDisplayName">-</strong></div>
+            <div class="account-info-row"><span>ID</span><strong id="accountId">-</strong></div>
+            <div class="account-info-row"><span>残高</span><strong id="accountBalance">0億円</strong></div>
+          </section>
+
+          <section class="account-action-card">
+            <h3>自分のQRコード</h3>
+            <p>このQRコードにはあなたのBuy-Buy IDだけが入っています。支払い・受け取り・フレンド登録に利用できます。</p>
+            <button id="accountQrButton" class="primary-button" type="button">自分のQRを表示</button>
+          </section>
+        </div>
+        <section class="account-action-card" style="grid-column: 1 / -1;">
+          <h3>お店</h3>
+          <p>お店を登録すると、登録した人に <strong>Business</strong> タブが表示されます。</p>
+          <button id="registerBusinessButton" class="primary-button" type="button">店を登録</button>
+          <div id="accountBusinessList" class="business-list" style="margin-top:14px;"></div>
+        </section>
+      </section>
+
+      <section id="businessView" class="page-view hidden">
+        <div class="panel-header" style="margin-bottom:16px;">
+          <div>
+            <h2 class="section-title" style="margin:0;">Business</h2>
+            <div id="businessSelector" style="margin-top:8px;"></div>
+          </div>
+        </div>
+
+        <div class="business-grid">
+          <section class="business-card">
+            <div class="business-label">BUSINESS</div>
+            <div id="businessName" class="business-name">-</div>
+            <div id="businessId" class="business-id">-</div>
+            <div id="businessRole" class="business-role">-</div>
+          </section>
+
+          <section class="business-panel">
+            <h3>売上</h3>
+            <div class="business-stats">
+              <div class="business-stat">
+                <span>今日の売上</span>
+                <strong id="businessTodaySales">0億円</strong>
+              </div>
+              <div class="business-stat">
+                <span>今月振り込まれる予定</span>
+                <strong id="businessMonthPayout">0億円</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="business-panel">
+            <h3>アクセスできる人</h3>
+            <div id="businessPeople" class="business-people"></div>
+          </section>
+
+          <section class="business-panel">
+            <h3>店のQRコード</h3>
+            <p style="color:#64748b;line-height:1.7;">このQRコードには店IDだけが入っています。</p>
+            <div class="business-qr">
+              <div id="businessQr"></div>
+            </div>
+            <div id="businessQrId" class="qr-id"></div>
+            <div class="business-actions">
+              <button id="businessScanButton" class="secondary-button" type="button">店QRを読み取る</button>
+              <button id="businessManualButton" class="primary-button" type="button">手入力</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+    </div>
+  </section>
+
+
+  <!-- =========================
+       QR MY CODE MODAL
+  ========================== -->
+  <div id="myQrModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3>自分のBuy-Buy QR</h3>
+          <p>このQRコードにはあなたの<strong>IDだけ</strong>が入っています。</p>
+        </div>
+        <button class="close-button" type="button" data-close="myQrModal">×</button>
+      </div>
+
+      <div class="qr-box">
+        <div id="myQr"></div>
+      </div>
+
+      <div id="myQrId" class="qr-id"></div>
+
+      <div class="modal-actions">
+        <button id="myQrFriendButton" class="secondary-button" type="button">フレンド登録に使う</button>
+        <button id="myQrCloseButton" class="primary-button" type="button">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       QR SCANNER MODAL
+  ========================== -->
+  <div id="scannerModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3 id="scannerTitle">QRコードを読み取る</h3>
+          <p id="scannerDescription">QRコードをカメラの枠内に入れてください。</p>
+        </div>
+        <button class="close-button" type="button" data-close="scannerModal">×</button>
+      </div>
+
+      <div class="scanner">
+        <video id="qrVideo" playsinline muted></video>
+        <canvas id="qrCanvas"></canvas>
+        <div class="scanner-frame"></div>
+        <div class="scanner-line"></div>
+      </div>
+
+      <div id="scannerStatus" class="scanner-status">
+        カメラを起動しています……
+      </div>
+
+      <div id="scannerResult" class="scan-result hidden"></div>
+
+      <div class="modal-actions">
+        <button id="stopScannerButton" class="secondary-button" type="button">カメラを止める</button>
+        <button id="scannerCloseButton" class="primary-button" type="button">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       PAYMENT MODAL
+  ========================== -->
+  <div id="paymentModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3>支払う</h3>
+          <p>相手のBuy-Buy QRを読み取って支払います。</p>
+        </div>
+        <button class="close-button" type="button" data-close="paymentModal">×</button>
+      </div>
+
+      <div id="paymentTarget" class="confirm-box hidden"></div>
+
+      <div class="field">
+        <label for="paymentAmount">支払う金額（億円）</label>
+        <input id="paymentAmount" type="number" min="1" step="1" inputmode="numeric" placeholder="例：1">
+      </div>
+
+      <div id="paymentError" class="error"></div>
+
+      <div class="modal-actions">
+        <button id="paymentScanButton" class="secondary-button" type="button">QRを読み取る</button>
+        <button id="paymentConfirmButton" class="primary-button" type="button">支払う</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       SEND MODAL
+  ========================== -->
+  <div id="sendModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header"><div><h3>送る</h3><p>ユーザーを選んで、テンキーで金額を入力してください。</p></div>
+        <button class="close-button" type="button" data-close="sendModal">×</button></div>
+      <label>ユーザーを選択</label>
+      <div id="sendUserPicker" class="user-picker"></div>
+      <div id="sendSuggestion" class="confirm-box hidden"></div>
+      <div id="sendAmountDisplay" class="keypad-display">0億円</div>
+      <div class="amount-keypad">
+        <button type="button" data-send-key="1">1</button><button type="button" data-send-key="2">2</button><button type="button" data-send-key="3">3</button>
+        <button type="button" data-send-key="4">4</button><button type="button" data-send-key="5">5</button><button type="button" data-send-key="6">6</button>
+        <button type="button" data-send-key="7">7</button><button type="button" data-send-key="8">8</button><button type="button" data-send-key="9">9</button>
+        <button type="button" class="key-clear" data-send-key="clear">C</button><button type="button" data-send-key="0">0</button><button type="button" class="key-back" data-send-key="back">⌫</button>
+      </div>
+      <input id="sendId" type="hidden"><input id="sendAmount" type="hidden">
+      <div id="sendError" class="error"></div>
+      <button id="sendConfirmButton" class="primary-button" type="button">送る</button>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       RECEIVE MODAL
+  ========================== -->
+  <div id="receiveModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header"><div><h3>受け取り</h3><p>送られたお金はここに自動で反映されます。</p></div>
+        <button class="close-button" type="button" data-close="receiveModal">×</button></div>
+      <div id="receiveNotifications" class="receive-notifications"></div>
+      <div class="receive-request-box">
+        <h4>請求する</h4><p>請求するユーザーを選んで、テンキーで金額を入力してください。</p>
+        <label>ユーザーを選択</label>
+        <div id="receiveUserPicker" class="user-picker"></div>
+        <div id="receiveRequestSuggestion" class="confirm-box hidden"></div>
+        <div id="receiveRequestDisplay" class="keypad-display">0億円</div>
+        <div class="amount-keypad">
+          <button type="button" data-request-key="1">1</button><button type="button" data-request-key="2">2</button><button type="button" data-request-key="3">3</button>
+          <button type="button" data-request-key="4">4</button><button type="button" data-request-key="5">5</button><button type="button" data-request-key="6">6</button>
+          <button type="button" data-request-key="7">7</button><button type="button" data-request-key="8">8</button><button type="button" data-request-key="9">9</button>
+          <button type="button" class="key-clear" data-request-key="clear">C</button><button type="button" data-request-key="0">0</button><button type="button" class="key-back" data-request-key="back">⌫</button>
+        </div>
+        <input id="receiveRequestId" type="hidden"><input id="receiveRequestAmount" type="hidden">
+        <div id="receiveRequestError" class="error"></div>
+        <button id="receiveRequestButton" class="primary-button" type="button">請求する</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       FRIEND REGISTER MODAL
+  ========================== -->
+  <div id="friendModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3>フレンド登録</h3>
+          <p>相手のBuy-Buy QRを読み取るだけで登録できます。</p>
+        </div>
+        <button class="close-button" type="button" data-close="friendModal">×</button>
+      </div>
+
+      <div class="friend-scan-note">
+        相手の決済用QRをそのまま使います。<br>
+        フレンド登録専用QRを別に作る必要はありません。
+      </div>
+
+      <div id="friendTarget" class="confirm-box hidden"></div>
+
+      <div id="friendError" class="error"></div>
+
+      <button id="friendScanButton" class="primary-button" type="button">QRを読み取る</button>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       BUSINESS REGISTER MODAL
+  ========================== -->
+  <div id="businessRegisterModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3>店を登録</h3>
+          <p>店名と、アクセスできる人を最大3人まで選んでください。</p>
+        </div>
+        <button class="close-button" type="button" data-close="businessRegisterModal">×</button>
+      </div>
+
+      <div class="field">
+        <label for="businessNameInput">店名</label>
+        <input id="businessNameInput" type="text" maxlength="60" placeholder="例：Tongカフェ">
+      </div>
+
+      <div class="field">
+        <label>アクセスできる人（あなたを含め最大3人）</label>
+        <div id="businessAccessUsers" class="business-people"></div>
+      </div>
+
+      <div id="businessRegisterError" class="error"></div>
+
+      <button id="businessRegisterConfirmButton" class="primary-button" type="button">登録する</button>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       BUSINESS MANUAL ACCESS MODAL
+  ========================== -->
+  <div id="businessManualModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3>店を手入力で開く</h3>
+          <p>店IDと店のパスワードを入力してください。</p>
+        </div>
+        <button class="close-button" type="button" data-close="businessManualModal">×</button>
+      </div>
+
+      <div class="field">
+        <label for="businessManualId">店ID</label>
+        <input id="businessManualId" type="text" placeholder="shop_xxxxxxxx">
+      </div>
+
+      <div class="field">
+        <label for="businessManualPassword">店のパスワード</label>
+        <input id="businessManualPassword" type="password" placeholder="パスワード">
+      </div>
+
+      <div id="businessManualError" class="error"></div>
+
+      <button id="businessManualConfirmButton" class="primary-button" type="button">開く</button>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       REQUEST RESULT MODAL
+  ========================== -->
+  <div id="messageModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3 id="messageTitle">完了</h3>
+          <p id="messageText"></p>
+        </div>
+        <button class="close-button" type="button" data-close="messageModal">×</button>
+      </div>
+      <button class="primary-button" type="button" data-close="messageModal">閉じる</button>
+    </div>
+  </div>
+
+
+<script>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "buybuy_accounts_v4";
+  const SESSION_KEY = "buybuy_current_user_v4";
+  const BUSINESS_STORAGE_KEY = "buybuy_businesses_v1";
+
+  let accounts = loadAccounts();
+  let businesses = loadBusinesses();
+  let currentUserId = localStorage.getItem(SESSION_KEY) || "";
+  let currentBusinessId = "";
+  let scannerStream = null;
+  let scannerTimer = null;
+  let scannerMode = "";
+  let scannerBusy = false;
+
+  const $ = (id) => document.getElementById(id);
+
+  function loadAccounts() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      if (Array.isArray(raw) && raw.length) {
+        return raw.map(normalizeAccount);
+      }
+    } catch (_) {}
+
+    // 以前のBuy-Buyデータがあれば移行
+    try {
+      const old = JSON.parse(localStorage.getItem("buybuy_accounts") || "[]");
+      if (Array.isArray(old) && old.length) {
+        const migrated = old.map(normalizeAccount);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+    } catch (_) {}
+
+    const demo = {
+      id: "demo",
+      password: "1234",
+      name: "デモユーザー",
+      displayName: "demo",
+      balanceOku: 0,
+      friends: [],
+      transactions: [],
+      notifications: []
+    };
+
+    const initial = [demo];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+    return initial;
+  }
+
+  function normalizeAccount(account) {
+    return {
+      id: String(account.id || ""),
+      password: String(account.password || ""),
+      name: String(account.name || account.displayName || account.id || ""),
+      displayName: String(account.displayName || account.name || account.id || ""),
+      balanceOku: Number.isInteger(Number(account.balanceOku)) ? Number(account.balanceOku) : 0,
+      friends: Array.isArray(account.friends) ? [...new Set(account.friends.map(String))] : [],
+      transactions: Array.isArray(account.transactions) ? account.transactions : [],
+      notifications: Array.isArray(account.notifications) ? account.notifications : []
+    };
+  }
+
+  function saveAccounts() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
+  }
+
+  function getCurrentUser() {
+    return accounts.find(a => a.id === currentUserId) || null;
+  }
+
+  function getAccount(id) {
+    return accounts.find(a => a.id === String(id)) || null;
+  }
+
+
+  function loadBusinesses() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(BUSINESS_STORAGE_KEY) || "[]");
+      if (!Array.isArray(raw)) return [];
+      return raw.map(b => ({
+        id: String(b.id || ""),
+        name: String(b.name || ""),
+        password: String(b.password || ""),
+        ownerId: String(b.ownerId || ""),
+        accessIds: Array.isArray(b.accessIds) ? b.accessIds.map(String) : [],
+        todaySalesOku: Number(b.todaySalesOku || 0),
+        monthPayoutOku: Number(b.monthPayoutOku || 0)
+      })).filter(b => b.id && b.name);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveBusinesses() {
+    localStorage.setItem(BUSINESS_STORAGE_KEY, JSON.stringify(businesses));
+  }
+
+  function getBusiness(id) {
+    return businesses.find(b => b.id === String(id)) || null;
+  }
+
+  function userCanAccessBusiness(userId, business) {
+    return !!business && business.accessIds.includes(String(userId));
+  }
+
+  function getAccessibleBusinesses(userId) {
+    return businesses.filter(b => userCanAccessBusiness(userId, b));
+  }
+
+  function makeBusinessId() {
+    let id = "";
+    do {
+      id = "shop_" + Math.random().toString(36).slice(2, 10);
+    } while (getBusiness(id));
+    return id;
+  }
+
+  function makeBusinessPassword() {
+    return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+  }
+
+  function renderBusinessAccessUsers() {
+    const user = getCurrentUser();
+    const container = $("businessAccessUsers");
+    if (!user || !container) return;
+
+    const candidates = accounts.filter(a => a.id !== user.id);
+    container.innerHTML = `
+      <div class="business-person">
+        <span><strong>${escapeHtml(user.displayName)}</strong><br><small>ID: ${escapeHtml(user.id)}（オーナー）</small></span>
+        <span>✓</span>
+      </div>
+    ` + candidates.map(a => `
+      <label class="business-person" style="cursor:pointer;">
+        <span><strong>${escapeHtml(a.displayName)}</strong><br><small>ID: ${escapeHtml(a.id)}</small></span>
+        <input type="checkbox" class="business-access-checkbox" value="${escapeHtml(a.id)}">
+      </label>
+    `).join("");
+
+    container.querySelectorAll(".business-access-checkbox").forEach(cb => {
+      cb.addEventListener("change", () => {
+        const checked = [...container.querySelectorAll(".business-access-checkbox:checked")];
+        if (checked.length > 2) {
+          cb.checked = false;
+          $("businessRegisterError").textContent = "アクセスできる人は、あなたを含めて3人までです。";
+        } else {
+          $("businessRegisterError").textContent = "";
+        }
+      });
+    });
+  }
+
+  function renderAccountBusinesses() {
+    const user = getCurrentUser();
+    const container = $("accountBusinessList");
+    if (!user || !container) return;
+
+    const list = getAccessibleBusinesses(user.id);
+    if (!list.length) {
+      container.innerHTML = `<div class="empty">まだ登録されているお店はありません。</div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(b => `
+      <div class="business-list-item">
+        <div>
+          <strong>${escapeHtml(b.name)}</strong>
+          <small>店ID: ${escapeHtml(b.id)}</small>
+        </div>
+        <button class="secondary-button" type="button" data-open-business="${escapeHtml(b.id)}">開く</button>
+      </div>
+    `).join("");
+
+    container.querySelectorAll("[data-open-business]").forEach(btn => {
+      btn.addEventListener("click", () => openBusiness(btn.dataset.openBusiness));
+    });
+  }
+
+  function renderBusinessView() {
+    const user = getCurrentUser();
+    const business = getBusiness(currentBusinessId);
+    if (!user || !business || !userCanAccessBusiness(user.id, business)) return;
+
+    $("businessName").textContent = business.name;
+    $("businessId").textContent = "店ID: " + business.id;
+    $("businessRole").textContent = business.ownerId === user.id ? "オーナー" : "アクセス権限あり";
+    $("businessTodaySales").textContent = formatOku(business.todaySalesOku);
+    $("businessMonthPayout").textContent = formatOku(business.monthPayoutOku);
+
+    const people = business.accessIds
+      .map(id => getAccount(id))
+      .filter(Boolean);
+
+    $("businessPeople").innerHTML = people.map(person => `
+      <div class="business-person">
+        <span><strong>${escapeHtml(person.displayName)}</strong><br><small>ID: ${escapeHtml(person.id)}</small></span>
+        <span>${person.id === business.ownerId ? "オーナー" : "アクセス"}</span>
+      </div>
+    `).join("");
+
+    generateQr("businessQr", business.id);
+    $("businessQrId").textContent = "店ID: " + business.id;
+
+    const accessible = getAccessibleBusinesses(user.id);
+    if (accessible.length > 1) {
+      $("businessSelector").innerHTML = `
+        <select id="businessSelect" style="width:100%;max-width:360px;padding:12px;border:1px solid #dbe3ec;border-radius:12px;">
+          ${accessible.map(b => `<option value="${escapeHtml(b.id)}" ${b.id === business.id ? "selected" : ""}>${escapeHtml(b.name)}</option>`).join("")}
+        </select>
+      `;
+      $("businessSelect").addEventListener("change", e => openBusiness(e.target.value));
+    } else {
+      $("businessSelector").innerHTML = "";
+    }
+  }
+
+  function openBusiness(id) {
+    const user = getCurrentUser();
+    const business = getBusiness(id);
+    if (!user || !business || !userCanAccessBusiness(user.id, business)) {
+      showMessage("アクセスできません", "このお店へのアクセス権がありません。");
+      return;
+    }
+
+    currentBusinessId = business.id;
+    updateBusinessTab();
+    renderBusinessView();
+    showPage("business");
+  }
+
+  function updateBusinessTab() {
+    const user = getCurrentUser();
+    const hasBusiness = !!user && getAccessibleBusinesses(user.id).length > 0;
+    $("businessTab").classList.toggle("hidden", !hasBusiness);
+  }
+
+  function openBusinessRegisterModal() {
+    $("businessNameInput").value = "";
+    $("businessRegisterError").textContent = "";
+    renderBusinessAccessUsers();
+    openModal("businessRegisterModal");
+  }
+
+  function registerBusiness() {
+    const user = getCurrentUser();
+    const name = $("businessNameInput").value.trim();
+    const checked = [...document.querySelectorAll(".business-access-checkbox:checked")].map(cb => cb.value);
+
+    if (!user) return;
+    if (!name) {
+      $("businessRegisterError").textContent = "店名を入力してください。";
+      return;
+    }
+    if (checked.length > 2) {
+      $("businessRegisterError").textContent = "アクセスできる人は、あなたを含めて3人までです。";
+      return;
+    }
+
+    const business = {
+      id: makeBusinessId(),
+      name,
+      password: makeBusinessPassword(),
+      ownerId: user.id,
+      accessIds: [user.id, ...checked],
+      todaySalesOku: 0,
+      monthPayoutOku: 0
+    };
+
+    businesses.push(business);
+    saveBusinesses();
+
+    currentBusinessId = business.id;
+    closeModal("businessRegisterModal");
+    updateApp();
+    openBusiness(business.id);
+
+    showMessage(
+      "お店を登録しました",
+      `店名：${business.name}\n店ID：${business.id}\n店のパスワード：${business.password}\n\nこの店IDとパスワードは大切に保管してください。`
+    );
+  }
+
+  function openBusinessManualModal() {
+    $("businessManualId").value = "";
+    $("businessManualPassword").value = "";
+    $("businessManualError").textContent = "";
+    openModal("businessManualModal");
+  }
+
+  function openBusinessFromManual() {
+    const id = $("businessManualId").value.trim();
+    const password = $("businessManualPassword").value;
+
+    const business = getBusiness(id);
+    const user = getCurrentUser();
+
+    if (!business) {
+      $("businessManualError").textContent = "その店IDのお店が見つかりません。";
+      return;
+    }
+    if (business.password !== password) {
+      $("businessManualError").textContent = "店のパスワードが違います。";
+      return;
+    }
+    if (!userCanAccessBusiness(user.id, business)) {
+      $("businessManualError").textContent = "このアカウントにはアクセス権がありません。";
+      return;
+    }
+
+    closeModal("businessManualModal");
+    openBusiness(business.id);
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function formatOku(value) {
+    return `${Number(value || 0)}億円`;
+  }
+
+  function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 11) return "おはようございます";
+    if (hour >= 11 && hour < 18) return "こんにちは";
+    return "こんばんは";
+  }
+
+  function showLogin() {
+    $("loginScreen").classList.remove("hidden");
+    $("appScreen").classList.add("hidden");
+  }
+
+  function showApp() {
+    const user = getCurrentUser();
+    if (!user) {
+      localStorage.removeItem(SESSION_KEY);
+      currentUserId = "";
+      showLogin();
+      return;
+    }
+
+    $("loginScreen").classList.add("hidden");
+    $("appScreen").classList.remove("hidden");
+
+    updateApp();
+    showPage("home");
+  }
+
+  function updateApp() {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    $("greetingMain").textContent = getGreeting();
+    $("greetingSub").textContent = `${user.displayName}さん、Buy-Buyへようこそ`;
+
+    $("balanceText").textContent = formatOku(user.balanceOku);
+    $("cardUserName").textContent = `${user.displayName} / ID: ${user.id}`;
+
+    $("accountName").textContent = user.name;
+    $("accountDisplayName").textContent = user.displayName;
+    $("accountId").textContent = user.id;
+    $("accountBalance").textContent = formatOku(user.balanceOku);
+
+    renderFriends();
+    renderTransactions();
+    renderAccountBusinesses();
+    updateBusinessTab();
+
+    if (currentBusinessId && getBusiness(currentBusinessId) && userCanAccessBusiness(user.id, getBusiness(currentBusinessId))) {
+      renderBusinessView();
+    }
+  }
+
+  function renderFriends() {
+    const user = getCurrentUser();
+    const container = $("friendList");
+
+    if (!user || !user.friends.length) {
+      container.innerHTML = `
+        <div class="empty">
+          まだフレンドがいません。<br>
+          「QRで登録」から相手の決済用QRを読み取ってください。
+        </div>
+      `;
+      return;
+    }
+
+    const rows = [];
+
+    user.friends.forEach(friendId => {
+      const friend = getAccount(friendId);
+      if (!friend) return;
+
+      const first = escapeHtml((friend.displayName || friend.id).slice(0, 1));
+
+      rows.push(`
+        <div class="friend-item">
+          <div class="friend-avatar">${first}</div>
+          <div class="friend-info">
+            <strong>${escapeHtml(friend.displayName)}</strong>
+            <span>ID: ${escapeHtml(friend.id)}</span>
+          </div>
+          <button
+            class="mini-button"
+            type="button"
+            data-send-friend="${escapeHtml(friend.id)}"
+          >送る</button>
+        </div>
+      `);
+    });
+
+    container.innerHTML = rows.length
+      ? rows.join("")
+      : `<div class="empty">登録されているフレンドが見つかりません。</div>`;
+
+    container.querySelectorAll("[data-send-friend]").forEach(button => {
+      button.addEventListener("click", () => {
+        openSendModal(button.dataset.sendFriend);
+      });
+    });
+  }
+
+  function renderTransactions() {
+    const user = getCurrentUser();
+    const container = $("transactions");
+
+    if (!user || !user.transactions.length) {
+      container.innerHTML = `<div class="empty">まだ取引履歴はありません。</div>`;
+      return;
+    }
+
+    const latest = [...user.transactions].reverse().slice(0, 10);
+
+    container.innerHTML = latest.map(tx => {
+      const amountClass = tx.type === "income" ? "income" : "expense";
+      const sign = tx.type === "income" ? "+" : "-";
+
+      return `
+        <div class="transaction">
+          <div>
+            <div class="transaction-title">${escapeHtml(tx.title || "取引")}</div>
+            <div class="transaction-date">${escapeHtml(tx.date || "")}</div>
+          </div>
+          <div class="transaction-amount ${amountClass}">
+            ${sign}${formatOku(tx.amountOku)}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function addTransaction(account, title, amountOku, type) {
+    account.transactions = Array.isArray(account.transactions)
+      ? account.transactions
+      : [];
+
+    account.transactions.push({
+      title,
+      amountOku: Number(amountOku),
+      type,
+      date: new Date().toLocaleString("ja-JP")
+    });
+
+    if (account.transactions.length > 50) {
+      account.transactions = account.transactions.slice(-50);
+    }
+  }
+
+  function showMessage(title, text) {
+    $("messageTitle").textContent = title;
+    $("messageText").textContent = text;
+    openModal("messageModal");
+  }
+
+  function openModal(id) {
+    $(id).classList.remove("hidden");
+  }
+
+  function closeModal(id) {
+    $(id).classList.add("hidden");
+
+    if (id === "scannerModal") {
+      stopScanner();
+    }
+  }
+
+  function closeAllModals() {
+    [
+      "myQrModal",
+      "scannerModal",
+      "paymentModal",
+      "sendModal",
+      "receiveModal",
+      "friendModal",
+      "businessRegisterModal",
+      "businessManualModal",
+      "messageModal"
+    ].forEach(id => $(id).classList.add("hidden"));
+
+    stopScanner();
+  }
+
+  function generateQr(containerId, id) {
+    const container = $(containerId);
+    container.innerHTML = "";
+
+    if (typeof QRCode === "undefined") {
+      container.innerHTML = `<div style="padding:20px;text-align:center;color:#64748b;">QRライブラリを読み込めませんでした。</div>`;
+      return;
+    }
+
+    new QRCode(container, {
+      text: String(id),
+      width: 210,
+      height: 210,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+
+  function openMyQrModal() {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    generateQr("myQr", user.id);
+    $("myQrId").textContent = `ID: ${user.id}`;
+    openModal("myQrModal");
+  }
+
+  function renderReceiveNotifications() {
+    const user = getCurrentUser();
+    const container = $("receiveNotifications");
+    if (!user || !container) return;
+
+    const notifications = Array.isArray(user.notifications) ? user.notifications : [];
+    if (!notifications.length) {
+      container.innerHTML = `<div class="empty">まだ受け取った送金はありません。</div>`;
+      return;
+    }
+
+    container.innerHTML = notifications.slice(-10).reverse().map(n => `
+      <div class="receive-notification">
+        ${escapeHtml(n.message)}
+        <small>${escapeHtml(n.date || "")}</small>
+      </div>
+    `).join("");
+  }
+
+  let selectedSendUserId = "";
+  let selectedRequestUserId = "";
+  let sendKeypadAmount = "";
+  let requestKeypadAmount = "";
+
+  function renderUserPicker(containerId, selectedId, onSelect) {
+    const current=getCurrentUser(), box=$(containerId);
+    if(!current || !box) return;
+    const users=accounts.filter(a=>a.id!==current.id);
+    const friends=Array.isArray(current.friends)?current.friends:[];
+    box.innerHTML=users.length ? users.map(u=>`
+      <button type="button" class="user-choice ${u.id===selectedId?"selected":""}" data-user-id="${escapeHtml(u.id)}">
+        <span><strong>${escapeHtml(u.displayName)}</strong><small>ID: ${escapeHtml(u.id)}${friends.includes(u.id)?" ・ フレンド":""}</small></span>
+        <span>${u.id===selectedId?"✓":"選択"}</span>
+      </button>`).join("") : `<div class="empty">選択できるユーザーがいません。</div>`;
+    box.querySelectorAll("[data-user-id]").forEach(btn=>btn.addEventListener("click",()=>onSelect(btn.dataset.userId)));
+  }
+
+  function keypadNext(value,key){
+    value=String(value||"");
+    if(key==="clear") return "";
+    if(key==="back") return value.slice(0,-1);
+    if(!/^[0-9]$/.test(String(key))) return value;
+    if(value.length>=6) return value;
+    if(value==="0") value="";
+    return value+key;
+  }
+  function updateSendKeypad(){ $("sendAmountDisplay").textContent=`${sendKeypadAmount||0}億円`; $("sendAmount").value=sendKeypadAmount; }
+  function updateRequestKeypad(){ $("receiveRequestDisplay").textContent=`${requestKeypadAmount||0}億円`; $("receiveRequestAmount").value=requestKeypadAmount; }
+
+  function openReceiveModal(){ renderReceiveNotifications(); openModal("receiveModal"); }
+  function openPaymentModal(){
+    $("paymentAmount").value=""; $("paymentError").textContent="";
+    $("paymentTarget").classList.add("hidden"); $("paymentTarget").innerHTML="";
+    openModal("paymentModal");
+  }
+  function openSendModal(id=""){
+    selectedSendUserId=id||""; sendKeypadAmount="";
+    $("sendError").textContent=""; $("sendSuggestion").classList.add("hidden"); $("sendSuggestion").innerHTML="";
+    const choose=userId=>{
+      selectedSendUserId=userId; $("sendId").value=userId;
+      const u=getAccount(userId);
+      $("sendSuggestion").classList.remove("hidden");
+      $("sendSuggestion").innerHTML=`${escapeHtml(u.displayName)}さんを選択しています`;
+      renderUserPicker("sendUserPicker",selectedSendUserId,choose);
+    };
+    renderUserPicker("sendUserPicker",selectedSendUserId,choose);
+    if(selectedSendUserId) choose(selectedSendUserId);
+    updateSendKeypad(); openModal("sendModal");
+  }
+  function openRequestModal(){
+    selectedRequestUserId=""; requestKeypadAmount="";
+    $("receiveRequestError").textContent=""; $("receiveRequestSuggestion").classList.add("hidden"); $("receiveRequestSuggestion").innerHTML="";
+    const choose=userId=>{
+      selectedRequestUserId=userId; $("receiveRequestId").value=userId;
+      const u=getAccount(userId);
+      $("receiveRequestSuggestion").classList.remove("hidden");
+      $("receiveRequestSuggestion").innerHTML=`${escapeHtml(u.displayName)}さんを選択しています`;
+      renderUserPicker("receiveUserPicker",selectedRequestUserId,choose);
+    };
+    renderUserPicker("receiveUserPicker",selectedRequestUserId,choose);
+    updateRequestKeypad(); openModal("receiveModal");
+  }
+
+  function openFriendModal() {
+    $("friendTarget").classList.add("hidden");
+    $("friendTarget").innerHTML = "";
+    $("friendError").textContent = "";
+    openModal("friendModal");
+  }
+
+  function updateIdSuggestion(inputId, boxId) {
+    const id = $(inputId).value.trim();
+    const box = $(boxId);
+
+    if (!id) {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      return;
+    }
+
+    const account = getAccount(id);
+    const current = getCurrentUser();
+
+    if (!account || (current && account.id === current.id)) {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      return;
+    }
+
+    box.classList.remove("hidden");
+    box.innerHTML = `もしかして<strong>「${escapeHtml(account.displayName)}」さん</strong>？<br><span style="color:#64748b;">ID: ${escapeHtml(account.id)}</span>`;
+  }
+
+  function openScanner(mode) {
+    scannerMode = mode;
+    scannerBusy = false;
+
+    const titles = {
+      payment: ["支払うQRを読み取る", "相手のBuy-Buy QRを読み取ってください。"],
+      send: ["送る相手のQRを読み取る", "相手のBuy-Buy QRを読み取ってください。"],
+      friend: ["フレンド登録QRを読み取る", "相手の決済用QRをそのまま読み取って登録します。"],
+      business: ["店QRを読み取る", "店のQRコードを読み取ってBusiness画面を開きます。"]
+    };
+
+    const [title, description] = titles[mode] || titles.payment;
+
+    $("scannerTitle").textContent = title;
+    $("scannerDescription").textContent = description;
+    $("scannerStatus").className = "scanner-status";
+    $("scannerStatus").textContent = "カメラを起動しています……";
+    $("scannerResult").classList.add("hidden");
+    $("scannerResult").textContent = "";
+
+    openModal("scannerModal");
+    startScanner();
+  }
+
+  async function startScanner() {
+    stopScanner(true);
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setScannerError("このブラウザではカメラを利用できません。Chromeなどの最新ブラウザで、HTTPSまたはlocalhostから開いてください。");
+      return;
+    }
+
+    try {
+      scannerStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+
+      $("qrVideo").srcObject = scannerStream;
+      await $("qrVideo").play();
+
+      $("scannerStatus").className = "scanner-status";
+      $("scannerStatus").textContent = "QRコードを枠内に入れてください。";
+
+      scannerTimer = requestAnimationFrame(scanFrame);
+    } catch (error) {
+      setScannerError("カメラを起動できませんでした。カメラの使用を許可してください。");
+    }
+  }
+
+  function stopScanner(clearStream = true) {
+    if (scannerTimer) {
+      cancelAnimationFrame(scannerTimer);
+      scannerTimer = null;
+    }
+
+    if (clearStream && scannerStream) {
+      scannerStream.getTracks().forEach(track => track.stop());
+      scannerStream = null;
+    }
+
+    if ($("qrVideo")) {
+      $("qrVideo").pause();
+      if (clearStream) $("qrVideo").srcObject = null;
+    }
+  }
+
+  function setScannerError(message) {
+    $("scannerStatus").className = "scanner-status error";
+    $("scannerStatus").textContent = message;
+  }
+
+  function scanFrame() {
+    if (!$("scannerModal").classList.contains("hidden") && scannerStream && !scannerBusy) {
+      const video = $("qrVideo");
+      const canvas = $("qrCanvas");
+
+      if (video.readyState >= 2 && video.videoWidth > 0) {
+        const size = Math.min(video.videoWidth, video.videoHeight);
+        canvas.width = size;
+        canvas.height = size;
+
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+        const sx = (video.videoWidth - size) / 2;
+        const sy = (video.videoHeight - size) / 2;
+
+        ctx.drawImage(
+          video,
+          sx, sy, size, size,
+          0, 0, size, size
+        );
+
+        const imageData = ctx.getImageData(0, 0, size, size);
+
+        let result = null;
+
+        if (typeof jsQR === "function") {
+          result = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth"
+          });
+        }
+
+        // 対応ブラウザではBarcodeDetectorも補助として使用
+        if (!result && "BarcodeDetector" in window) {
+          // 非同期APIなので別処理に任せる
+          scanWithBarcodeDetector(canvas);
+        }
+
+        if (result && result.data) {
+          handleScannedId(result.data.trim());
+          return;
+        }
+      }
+    }
+
+    scannerTimer = requestAnimationFrame(scanFrame);
+  }
+
+  let barcodeDetectorRunning = false;
+
+  async function scanWithBarcodeDetector(canvas) {
+    if (barcodeDetectorRunning || !("BarcodeDetector" in window)) return;
+
+    barcodeDetectorRunning = true;
+
+    try {
+      const detector = new BarcodeDetector({ formats: ["qr_code"] });
+      const codes = await detector.detect(canvas);
+
+      if (codes && codes.length && codes[0].rawValue) {
+        handleScannedId(codes[0].rawValue.trim());
+      }
+    } catch (_) {
+      // jsQRを基本としているため無視
+    } finally {
+      barcodeDetectorRunning = false;
+    }
+  }
+
+  function handleScannedId(rawValue) {
+    if (scannerBusy) return;
+
+    const id = String(rawValue || "").trim();
+
+    if (!id) return;
+
+    // QRにはIDだけが入っている設計。
+    // BusinessモードではIDを店IDとして扱います。
+    const current = getCurrentUser();
+    scannerBusy = true;
+
+    if (scannerMode === "business") {
+      const business = getBusiness(id);
+      if (!business) {
+        setScannerError(`このQRの店ID「${id}」のお店が見つかりません。`);
+        scannerBusy = false;
+        return;
+      }
+      if (!current || !userCanAccessBusiness(current.id, business)) {
+        setScannerError("このお店へのアクセス権がありません。");
+        scannerBusy = false;
+        return;
+      }
+
+      stopScanner();
+      $("scannerResult").classList.remove("hidden");
+      $("scannerResult").innerHTML = `読み取り成功<br><strong>${escapeHtml(business.name)}</strong><br>店ID: ${escapeHtml(business.id)}`;
+
+      setTimeout(() => {
+        closeModal("scannerModal");
+        scannerBusy = false;
+        openBusiness(business.id);
+      }, 250);
+      return;
+    }
+
+    const account = getAccount(id);
+
+    if (!account) {
+      setScannerError(`このQRのID「${id}」はBuy-Buyに登録されていません。`);
+      scannerBusy = false;
+      return;
+    }
+
+    if (current && account.id === current.id) {
+      setScannerError("自分自身のQRコードです。相手のQRを読み取ってください。");
+      scannerBusy = false;
+      return;
+    }
+
+    stopScanner();
+
+    $("scannerResult").classList.remove("hidden");
+    $("scannerResult").innerHTML =
+      `読み取り成功<br><strong>${escapeHtml(account.displayName)}さん</strong><br>ID: ${escapeHtml(account.id)}`;
+
+    setTimeout(() => {
+      closeModal("scannerModal");
+
+      if (scannerMode === "payment") {
+        $("paymentTarget").classList.remove("hidden");
+        $("paymentTarget").innerHTML =
+          `支払先：<strong>${escapeHtml(account.displayName)}さん</strong><br>ID: ${escapeHtml(account.id)}`;
+        $("paymentTarget").dataset.id = account.id;
+        $("paymentError").textContent = "";
+        openModal("paymentModal");
+      }
+
+      if (scannerMode === "send") {
+        selectedSendUserId = account.id;
+        $("sendId").value = account.id;
+        updateIdSuggestion("sendId", "sendSuggestion");
+        openSendModal(account.id);
+      }
+
+      if (scannerMode === "friend") {
+        registerFriend(account.id);
+      }
+
+      scannerBusy = false;
+    }, 250);
+  }
+
+  function registerFriend(id) {
+    const user = getCurrentUser();
+    const friend = getAccount(id);
+
+    if (!user || !friend) {
+      $("friendError").textContent = "登録できる相手が見つかりません。";
+      return;
+    }
+
+    if (user.id === friend.id) {
+      $("friendError").textContent = "自分自身はフレンド登録できません。";
+      return;
+    }
+
+    if (user.friends.includes(friend.id)) {
+      $("friendError").textContent = "すでにフレンド登録されています。";
+      return;
+    }
+
+    user.friends.push(friend.id);
+    saveAccounts();
+    updateApp();
+
+    closeModal("friendModal");
+    closeModal("scannerModal");
+    showMessage("フレンド登録完了", `${friend.displayName}さんをフレンドに登録しました。`);
+  }
+
+  function validateOkuAmount(value) {
+    const amount = Number(value);
+    if (!Number.isInteger(amount) || amount <= 0) return null;
+    return amount;
+  }
+
+  function makeTransfer(fromId, toId, amountOku, titleFrom, titleTo) {
+    const sender = getAccount(fromId);
+    const receiver = getAccount(toId);
+
+    if (!sender || !receiver) {
+      return { ok: false, message: "相手のアカウントが見つかりません。" };
+    }
+
+    if (sender.id === receiver.id) {
+      return { ok: false, message: "自分自身には送れません。" };
+    }
+
+    const amount = validateOkuAmount(amountOku);
+
+    if (amount === null) {
+      return { ok: false, message: "金額は1億円以上の整数で入力してください。" };
+    }
+
+    if (sender.balanceOku < amount) {
+      return {
+        ok: false,
+        message: `残高が足りません。現在の残高は${formatOku(sender.balanceOku)}です。`
+      };
+    }
+
+    sender.balanceOku -= amount;
+    receiver.balanceOku += amount;
+
+    addTransaction(sender, titleFrom, amount, "expense");
+    addTransaction(receiver, titleTo, amount, "income");
+
+    receiver.notifications = Array.isArray(receiver.notifications) ? receiver.notifications : [];
+    receiver.notifications.push({
+      message: `${sender.displayName}さんから${formatOku(amount)}が送られています`,
+      date: new Date().toLocaleString("ja-JP")
+    });
+    if (receiver.notifications.length > 30) {
+      receiver.notifications = receiver.notifications.slice(-30);
+    }
+
+    saveAccounts();
+    updateApp();
+
+    return { ok: true };
+  }
+
+  function payConfirm() {
+    const targetId = $("paymentTarget").dataset.id;
+    const amount = validateOkuAmount($("paymentAmount").value);
+
+    if (!targetId) {
+      $("paymentError").textContent = "先に相手のQRコードを読み取ってください。";
+      return;
+    }
+
+    if (amount === null) {
+      $("paymentError").textContent = "金額は1億円以上の整数で入力してください。";
+      return;
+    }
+
+    const target = getAccount(targetId);
+
+    if (!target) {
+      $("paymentError").textContent = "支払先が見つかりません。";
+      return;
+    }
+
+    const result = makeTransfer(
+      currentUserId,
+      target.id,
+      amount,
+      `${target.displayName}さんへ支払い`,
+      `${getCurrentUser().displayName}さんから支払い`
+    );
+
+    if (!result.ok) {
+      $("paymentError").textContent = result.message;
+      return;
+    }
+
+    closeModal("paymentModal");
+    showMessage("支払い完了", `${target.displayName}さんへ${formatOku(amount)}を支払いました。`);
+  }
+
+  function sendConfirm(){
+    const target=getAccount(selectedSendUserId), amount=validateOkuAmount(sendKeypadAmount);
+    if(!selectedSendUserId){$("sendError").textContent="送るユーザーを選択してください。";return;}
+    if(amount===null){$("sendError").textContent="金額は1億円以上の整数で入力してください。";return;}
+    if(!target){$("sendError").textContent="選択したユーザーが見つかりません。";return;}
+    const result=makeTransfer(currentUserId,target.id,amount,`${target.displayName}さんへ送金`,`${getCurrentUser().displayName}さんから送金`);
+    if(!result.ok){$("sendError").textContent=result.message;return;}
+    closeModal("sendModal"); showMessage("送金完了",`${target.displayName}さんへ${formatOku(amount)}を送りました。`);
+  }
+
+  function receiveRequestConfirm(){
+    const target=getAccount(selectedRequestUserId), amount=validateOkuAmount(requestKeypadAmount), current=getCurrentUser();
+    if(!selectedRequestUserId){$("receiveRequestError").textContent="請求するユーザーを選択してください。";return;}
+    if(amount===null){$("receiveRequestError").textContent="金額は1億円以上の整数で入力してください。";return;}
+    if(!target){$("receiveRequestError").textContent="選択したユーザーが見つかりません。";return;}
+    if(target.id===current.id){$("receiveRequestError").textContent="自分自身には請求できません。";return;}
+    target.notifications=Array.isArray(target.notifications)?target.notifications:[];
+    target.notifications.push({message:`${current.displayName}さんから${formatOku(amount)}の請求が届いています`,date:new Date().toLocaleString("ja-JP")});
+    if(target.notifications.length>30) target.notifications=target.notifications.slice(-30);
+    saveAccounts(); closeModal("receiveModal");
+    showMessage("請求を送りました",`${target.displayName}さんへ${formatOku(amount)}の請求を送りました。`);
+  }
+
+  // =========================
+  // LOGIN / REGISTER
+  // =========================
+
+  $("loginTab").addEventListener("click", () => {
+    $("loginTab").classList.add("active");
+    $("registerTab").classList.remove("active");
+    $("loginForm").classList.remove("hidden");
+    $("registerForm").classList.add("hidden");
+  });
+
+  $("registerTab").addEventListener("click", () => {
+    $("registerTab").classList.add("active");
+    $("loginTab").classList.remove("active");
+    $("registerForm").classList.remove("hidden");
+    $("loginForm").classList.add("hidden");
+  });
+
+  $("loginForm").addEventListener("submit", event => {
+    event.preventDefault();
+
+    const id = $("loginId").value.trim();
+    const password = $("loginPassword").value;
+
+    const account = getAccount(id);
+
+    if (!account || account.password !== password) {
+      $("loginError").textContent = "IDまたはパスワードが違います。";
+      return;
+    }
+
+    $("loginError").textContent = "";
+    currentUserId = account.id;
+    localStorage.setItem(SESSION_KEY, currentUserId);
+    showApp();
+  });
+
+  $("registerForm").addEventListener("submit", event => {
+    event.preventDefault();
+
+    const name = $("regName").value.trim();
+    const displayName = $("regDisplayName").value.trim();
+    const id = $("regId").value.trim();
+    const password = $("regPassword").value;
+    const password2 = $("regPassword2").value;
+
+    if (!name || !displayName || !id || !password || !password2) {
+      $("registerError").textContent = "すべて入力してください。";
+      return;
+    }
+
+    if (!/^[A-Za-z0-9_-]{3,30}$/.test(id)) {
+      $("registerError").textContent = "IDは英数字・_・-の3〜30文字で入力してください。";
+      return;
+    }
+
+    if (password.length < 4) {
+      $("registerError").textContent = "パスワードは4文字以上にしてください。";
+      return;
+    }
+
+    if (password !== password2) {
+      $("registerError").textContent = "パスワードが一致していません。";
+      return;
+    }
+
+    if (getAccount(id)) {
+      $("registerError").textContent = "そのIDはすでに使われています。";
+      return;
+    }
+
+    const account = {
+      id,
+      password,
+      name,
+      displayName,
+      balanceOku: 0,
+      friends: [],
+      transactions: [],
+      notifications: []
+    };
+
+    accounts.push(account);
+    saveAccounts();
+
+    currentUserId = id;
+    localStorage.setItem(SESSION_KEY, currentUserId);
+
+    $("registerError").textContent = "";
+    showApp();
+  });
+
+  // =========================
+  // PAGE TABS
+  // =========================
+
+  function showPage(page) {
+    const isHome = page === "home";
+    const isAccount = page === "account";
+    const isBusiness = page === "business";
+
+    $("homeView").classList.toggle("hidden", !isHome);
+    $("accountView").classList.toggle("hidden", !isAccount);
+    $("businessView").classList.toggle("hidden", !isBusiness);
+
+    $("homeTab").classList.toggle("active", isHome);
+    $("accountTab").classList.toggle("active", isAccount);
+    $("businessTab").classList.toggle("active", isBusiness);
+  }
+
+  $("homeTab").addEventListener("click", () => showPage("home"));
+  $("accountTab").addEventListener("click", () => {
+    updateApp();
+    showPage("account");
+  });
+  $("businessTab").addEventListener("click", () => {
+    const user = getCurrentUser();
+    const list = getAccessibleBusinesses(user ? user.id : "");
+    if (list.length) {
+      if (!currentBusinessId || !getBusiness(currentBusinessId) || !userCanAccessBusiness(user.id, getBusiness(currentBusinessId))) {
+        currentBusinessId = list[0].id;
+      }
+      renderBusinessView();
+      showPage("business");
+    }
+  });
+  $("accountQrButton").addEventListener("click", openMyQrModal);
+  $("registerBusinessButton").addEventListener("click", openBusinessRegisterModal);
+  $("businessRegisterConfirmButton").addEventListener("click", registerBusiness);
+  $("businessScanButton").addEventListener("click", () => openScanner("business"));
+  $("businessManualButton").addEventListener("click", openBusinessManualModal);
+  $("businessManualConfirmButton").addEventListener("click", openBusinessFromManual);
+
+  // =========================
+  // MAIN BUTTONS
+  // =========================
+
+  $("paymentCard").addEventListener("click", openMyQrModal);
+  $("payButton").addEventListener("click", () => openScanner("payment"));
+  $("sendButton").addEventListener("click", () => openSendModal());
+  $("friendRegisterButton").addEventListener("click", openFriendModal);
+
+  $("myQrCloseButton").addEventListener("click", () => closeModal("myQrModal"));
+  $("myQrFriendButton").addEventListener("click", () => {
+    closeModal("myQrModal");
+    openFriendModal();
+  });
+
+  // =========================
+  // SCAN BUTTONS
+  // =========================
+
+  $("paymentScanButton").addEventListener("click", () => {
+    closeModal("paymentModal");
+    openScanner("payment");
+  });
+
+  $("friendScanButton").addEventListener("click", () => {
+    closeModal("friendModal");
+    openScanner("friend");
+  });
+
+  $("stopScannerButton").addEventListener("click", () => stopScanner());
+  $("scannerCloseButton").addEventListener("click", () => closeModal("scannerModal"));
+
+  // =========================
+  // CONFIRM BUTTONS
+  // =========================
+
+  $("paymentConfirmButton").addEventListener("click", payConfirm);
+  $("sendConfirmButton").addEventListener("click", sendConfirm);
+  $("receiveRequestButton").addEventListener("click", receiveRequestConfirm);
+  $("sendButton").addEventListener("click", () => openSendModal());
+  $("receiveButton").addEventListener("click", openReceiveModal);
+  $("requestButton").addEventListener("click", openRequestModal);
+
+  document.querySelectorAll("[data-send-key]").forEach(btn => btn.addEventListener("click",()=>{
+    sendKeypadAmount=keypadNext(sendKeypadAmount,btn.dataset.sendKey); updateSendKeypad();
+  }));
+  document.querySelectorAll("[data-request-key]").forEach(btn => btn.addEventListener("click",()=>{
+    requestKeypadAmount=keypadNext(requestKeypadAmount,btn.dataset.requestKey); updateRequestKeypad();
+  }));
+
+  $("friendModal").addEventListener("click", event => {
+    if (event.target === $("friendModal")) return;
+  });
+
+  // フレンド登録の確認欄をタップして登録
+  $("friendTarget").addEventListener("click", () => {
+    const id = $("friendTarget").dataset.id;
+    if (id) registerFriend(id);
+  });
+
+  // =========================
+  // CLOSE BUTTONS
+  // =========================
+
+  document.querySelectorAll("[data-close]").forEach(button => {
+    button.addEventListener("click", () => {
+      closeModal(button.dataset.close);
+    });
+  });
+
+  document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
+    backdrop.addEventListener("click", event => {
+      if (event.target === backdrop) {
+        closeModal(backdrop.id);
+      }
+    });
+  });
+
+  $("logoutButton").addEventListener("click", () => {
+    closeAllModals();
+    localStorage.removeItem(SESSION_KEY);
+    currentUserId = "";
+    currentBusinessId = "";
+    $("loginForm").reset();
+    showLogin();
+  });
+
+  // =========================
+  // START
+  // =========================
+
+  if (currentUserId && getAccount(currentUserId)) {
+    const initialBusinesses = getAccessibleBusinesses(currentUserId);
+    if (initialBusinesses.length) currentBusinessId = initialBusinesses[0].id;
+    showApp();
+  } else {
+    showLogin();
+  }
+})();
+</script>
+
+</body>
+</html>
